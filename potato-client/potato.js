@@ -1,62 +1,62 @@
-
-    'use strict';
+'use strict';
 
 function loadImages(prefix) {
-        var images = {
-            'grass': null,
-            'water': null
-        };
+  var images = {
+    'grass': null,
+    'water': null
+  };
 
-        for (var i in images) {
-            images[i] = new Image();
-            images[i].src = prefix + '/' + i + '.png';
-        }
+  for (var i in images) {
+    images[i] = new Image();
+    images[i].src = prefix + '/' + i + '.png';
+  }
 
-        return images;
+  return images;
+}
+
+function makeTiles(game) {
+  var tiles = new Array(game.board.width);
+
+  for (var i = 0; i < game.board.height; ++i) {
+    tiles[i] = new Array(game.board.width);
+  }
+
+  for (var y = 0; y < game.board.height; ++y) {
+    for (var x = 0; x < game.board.width; ++x) {
+      var terrainType = Math.random() < 0.5 ? 'grass' : 'water';
+      tiles[y][x] = terrainType;
     }
+  }
 
-    function makeTiles(game) {
-      var tiles = new Array(game.board.width);
+  return tiles;
+}
 
-      for (var i = 0; i < game.board.width; ++i) {
-        tiles[i] = new Array(game.board.height);
-      }
+function drawBoard(game) {
+  for (var y = 0; y < game.board.height; ++y) {
+    for (var x = 0; x < game.board.width; ++x) {
+      game.ctx.drawImage(
+        game.images[game.board.tiles[y][x]],
+        x * game.board.tileSize,
+        y * game.board.tileSize,
+        game.board.tileSize,
+        game.board.tileSize);
+    }   
+  }
 
-      return tiles;
-    }
+  game.ctx.strokeStyle = "black";
+  game.ctx.stroke();
+}
 
+function render(game) {
+  game.ctx.beginPath();
+  game.ctx.clearRect(0, 0, game.canvas.width, game.canvas.height);
 
-    function drawBoard(game) {
-        for (var y = 0; y < game.board.height; ++y) {
-            for (var x = 0; x < game.board.width; ++x) {
+  drawBoard(game);
+}
 
-            }   
-        }
-
-        for (var x = 0; x < game.board.width; ++x) {
-            game.ctx.moveTo(x * game.board.tileSize, 0);
-            game.ctx.lineTo(x * game.board.tileSize, game.board.height * game.board.tileSize);
-        }
-
-        for (var y = 0; y < game.board.height; ++y) {
-            game.ctx.moveTo(0, y * game.board.height);
-            game.ctx.lineTo(game.board.width * game.board.tileSize, y * game.board.tileSize);
-        }
-
-        game.ctx.strokeStyle = "black";
-        game.ctx.stroke();
-    }
-
-    function render(game) {
-      game.ctx.beginPath();
-      game.ctx.clearRect(0, 0, game.canvas.width, game.canvas.height);
-
-      drawBoard(game);
-    }
-
-    function gameLoop(game) {
-      render(game);
-    }
+function gameLoop(game) {
+  render(game);
+}
 
 var initializePotato = function () {
   var game = {

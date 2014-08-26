@@ -6,39 +6,12 @@
     
     <link rel="stylesheet" type="text/css" media="all" href="potato.css"/>
     <script src="jquery-2.1.1.js"></script>
+    <script src="potato.js"></script>
 
     <script>
-      $(function () {
-        var gridWidth = 20;
-        var gridHeight = 20;
-
-        var tileWidth = 40;
-        var tileHeight = 40;
-
-        var canvas = $('<canvas/>').attr({
-            width: gridWidth * tileWidth,
-            height: gridHeight * tileHeight
-        }).appendTo('body');
-
-        var context = canvas.get(0).getContext("2d");
-
-        function drawBoard() {
-            for (var x = 0; x <= gridWidth; ++x) {
-                context.moveTo(x * tileWidth, 0);
-                context.lineTo(x * tileWidth, gridHeight * tileHeight);
-            }
-
-            for (var y = 0; y <= gridHeight; ++y) {
-                context.moveTo(0,                     y * tileHeight);
-                context.lineTo(gridWidth * tileWidth, y * tileHeight);
-            }
-
-            context.strokeStyle = "black";
-            context.stroke();
-        }
-
-        drawBoard();  
-      });
+    $(function () {
+      initializePotato();
+    });
     </script>
   </head>
 

@@ -1,6 +1,6 @@
 'use strict';
 
-function loadImages(prefix) {
+var loadImages = function (prefix) {
   var images = {
     'grass': null,
     'water': null
@@ -14,7 +14,7 @@ function loadImages(prefix) {
   return images;
 }
 
-function makeTiles(game) {
+var makeTiles = function (game) {
   var tiles = new Array(game.board.width);
 
   for (var i = 0; i < game.board.height; ++i) {
@@ -31,30 +31,70 @@ function makeTiles(game) {
   return tiles;
 }
 
-function drawBoard(game) {
+var renderTile = function (game, image, x, y) {
+  game.ctx.drawImage(
+    game.images[image],
+    x * game.board.tileSize,
+    y * game.board.tileSize,
+    game.board.tileSize,
+    game.board.tileSize
+  );
+}
+
+var renderTerrain = function (game) {
   for (var y = 0; y < game.board.height; ++y) {
     for (var x = 0; x < game.board.width; ++x) {
-      game.ctx.drawImage(
-        game.images[game.board.tiles[y][x]],
-        x * game.board.tileSize,
-        y * game.board.tileSize,
-        game.board.tileSize,
-        game.board.tileSize);
+      renderTile(game, game.board.tiles[y][x], x, y);
     }   
+  }
+}
+
+var renderGrid = function (game) {
+  game.ctx.beginPath();
+
+  for (var x = 0; x < game.board.width; ++x) {
+    game.ctx.moveTo(x * game.board.tileSize, 0);
+    game.ctx.lineTo(x * game.board.tileSize, game.board.height * game.board.tileSize);
+  }
+
+  for (var y = 0; y < game.board.height; ++y) {
+    game.ctx.moveTo(0, y * game.board.tileSize);
+    game.ctx.lineTo(game.board.width * game.board.tileSize, y * game.board.tileSize);
   }
 
   game.ctx.strokeStyle = "black";
   game.ctx.stroke();
 }
 
-function render(game) {
-  game.ctx.beginPath();
-  game.ctx.clearRect(0, 0, game.canvas.width, game.canvas.height);
-
-  drawBoard(game);
+var renderEntities = function (game) {
+  game.cities.map(function (city) { renderCity(game, city); });
+  game.units.map(function (unit) { renderUnit(game, unit); });
 }
 
-function gameLoop(game) {
+var renderCity = function (game, city) {
+  game.ctx.drawImage(
+    game.images['city'],
+    city.x * game.board.tileSize,
+    city.y * game.board.tileSize,
+    game.board.tileSize,
+    game.board.tileSize
+  );
+}
+
+var renderUnit = function (game, unit) {
+  game.ctx.drawImage()
+}
+
+var render = function (game) {
+  game.ctx.clearRect(0, 0, game.canvas.width, game.canvas.height);
+
+  renderTerrain(game);
+  renderGrid(game);
+  renderEntities(game);
+}
+
+var gameLoop = function (game) {
+  //game = update(game);
   render(game);
 }
 
@@ -72,6 +112,9 @@ var initializePotato = function () {
 
       tiles: []
     },
+
+    cities: [],
+    units: []
   };
 
   game.images = loadImages('img');

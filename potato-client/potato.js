@@ -3,7 +3,8 @@
 var loadImages = function (prefix) {
   var images = {
     'grass': null,
-    'water': null
+    'water': null,
+    'city': null
   };
 
   for (var i in images) {
@@ -72,17 +73,15 @@ var renderEntities = function (game) {
 }
 
 var renderCity = function (game, city) {
-  game.ctx.drawImage(
-    game.images['city'],
-    city.x * game.board.tileSize,
-    city.y * game.board.tileSize,
-    game.board.tileSize,
-    game.board.tileSize
-  );
+  renderTile(game, 'city', city.x, city.y);
 }
 
 var renderUnit = function (game, unit) {
-  game.ctx.drawImage()
+  throw 'not implemented';
+}
+
+var renderInteractions = function (game) {
+  throw 'not implemented';
 }
 
 var render = function (game) {
@@ -91,11 +90,13 @@ var render = function (game) {
   renderTerrain(game);
   renderGrid(game);
   renderEntities(game);
+
+  //renderInteractions(game);
 }
 
-var gameLoop = function (game) {
-  //game = update(game);
-  render(game);
+var updateMouse = function (game, event) {
+  game.mouse.x = event.pageX;
+  game.mouse.y = event.pageY;
 }
 
 var initializePotato = function () {
@@ -103,6 +104,11 @@ var initializePotato = function () {
     images: null,
     ctx: null,
     canvas: null,
+
+    mouse: {
+      x: 0,
+      y: 0
+    },
 
     board: {
       width: 20,
@@ -113,7 +119,7 @@ var initializePotato = function () {
       tiles: []
     },
 
-    cities: [],
+    cities: [{x: 1, y: 1}],
     units: []
   };
 
@@ -123,9 +129,14 @@ var initializePotato = function () {
   game.canvas = $('<canvas/>').attr({
     width: game.board.width * game.board.tileSize,
     height: game.board.height * game.board.tileSize
-  }).appendTo('body');
+  })
+  .appendTo('body')
+  .mousemove(function (event) {
+    updateMouse(game, event);
+  });
 
   game.ctx = game.canvas.get(0).getContext("2d");
 
-  setInterval(function () { gameLoop(game); }, 1000);
+  //setInterval(function () { update(game); }, 1000);
+  window.requestAnimationFrame(function () { render(game); })
 };

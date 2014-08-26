@@ -4,13 +4,16 @@
   <head>
     <meta name="encoding" charset="utf-8"/>
     
-    <link rel="stylesheet" type="text/css" media="all" href="squareshit.css"/>
+    <link rel="stylesheet" type="text/css" media="all" href="potato.css"/>
     <script src="jquery-2.1.1.js"></script>
 
     <script>
       $(function () {
         var gridWidth = 500;
         var gridHeight = 500;
+
+        var tileWidth = 10;
+        var tileHeight = 10;
 
         var canvas = $('<canvas/>').attr({width: gridWidth + 1, height: gridHeight + 1}).appendTo('body');
 
@@ -24,8 +27,8 @@
 
 
             for (var x = 0; x <= gridHeight; x += 50) {
-                context.moveTo(0, 1 + x);
-                context.lineTo(gridWidth, 1 + x);
+                context.moveTo(0, x);
+                context.lineTo(gridWidth, x);
             }
 
             context.strokeStyle = "black";

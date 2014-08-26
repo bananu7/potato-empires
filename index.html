@@ -8,6 +8,32 @@
     <script src="jquery-2.1.1.js"></script>
 
     <script>
+      $(function () {
+        var gridWidth = 500;
+        var gridHeight = 500;
+
+        var canvas = $('<canvas/>').attr({width: gridWidth + 1, height: gridHeight + 1}).appendTo('body');
+
+        var context = canvas.get(0).getContext("2d");
+
+        function drawBoard(){
+            for (var x = 0; x <= gridWidth; x += 50) {
+                context.moveTo(0.5 + x, 0);
+                context.lineTo(0.5 + x, gridHeight);
+            }
+
+
+            for (var x = 0; x <= gridHeight; x += 50) {
+                context.moveTo(0, 1 + x);
+                context.lineTo(gridWidth, 1 + x);
+            }
+
+            context.strokeStyle = "black";
+            context.stroke();
+        }
+
+        drawBoard();  
+      });
     </script>
   </head>
 

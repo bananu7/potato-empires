@@ -3,36 +3,48 @@ module Main where
 import StatefulScotty
 import Web.Scotty.Trans
 import Data.Aeson.Types
-import qualified Data.Aeson
 import Data.Default
 import Data.String
 import Data.Text.Lazy (Text)
 import Data.Text.Lazy.Encoding (decodeUtf8)
 import Network.Wai.Middleware.RequestLogger
 
-newtype AppState = AppState { tickCount :: Int }
-instance Default AppState where
-    def = AppState 0
+--newtype AppState = AppState { tickCount :: Int }
+--instance Default AppState where
+--    def = AppState 0 
 
-app :: ScottyT Text (WebM AppState) ()
+data GameState = GameState {
+    _game :: GameMap,
+    _cities :: [City],
+    _units :: [Unit],
+    _timestamp :: Timestamp
+    }
+instance Default GameState where
+    def = GameState initialMap [] [] 0
+
+app :: ScottyT Text (WebM GameState) ()
 app = do
     middleware logStdoutDev
 
     get "/test" $ do
-        c <- webM $ gets tickCount
-        text $ fromString $ show c
+        t <- webM $ gets _timestamp
+        text $ fromString $ show t
+
+    get "/units" $ do
+        units <- webM $ gets _units
+        json units
+
+    get "/addunit" $ do
+        webM $ modify $ \ st -> st { _units = (Unit 99 Redosia (Point 0 0)) : _units st }
+        redirect "/test"
 
     get "/" $ do
-        --json initialMap
-        text $ decodeUtf8 $ Data.Aeson.encode initialMap
+        json initialMap
 
     get "/plusone" $ do
-        webM $ modify $ \ st -> st { tickCount = tickCount st + 1 }
-        redirect "/"
-
-    get "/plustwo" $ do
-        webM $ modify $ \ st -> st { tickCount = tickCount st + 2 }
-        redirect "/"
+--      webM $ modify $ \ st -> st { tickCount = tickCount st + 1 }
+        webM $ modify $ \ st -> st { _timestamp = _timestamp st + 1 }
+        redirect "/test"
 
 main = startScotty 3000 app
 

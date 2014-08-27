@@ -1,2 +1,10 @@
+# Haskell build folder
 dist/
+
+# Haskell binaries
+*.hi
+*.o
+*.exe
+
+# Temporary editor stuffs
 *.*~

@@ -1,4 +1,6 @@
 {-# LANGUAGE OverloadedStrings, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 -- An example of embedding a custom monad into
 -- Scotty's transformer stack, using ReaderT to provide access
 -- to a TVar containing global state.
@@ -23,6 +25,7 @@ import Data.Default
 --import Data.Text.Lazy (Text)
 
 import Web.Scotty.Trans
+import Control.Monad.State.Class
 
 -- Why 'ReaderT (TVar AppState)' rather than 'StateT AppState'?
 -- With a state transformer, 'runActionToIO' (below) would have
@@ -43,13 +46,16 @@ newtype WebM appState a = WebM { runWebM :: ReaderT (TVar appState) IO a }
 webM :: MonadTrans t => WebM appState a -> t (WebM appState) a
 webM = lift
 
+instance MonadState s (WebM s) where
+    get = ask >>= liftIO . readTVarIO >>= return
+    put x = ask >>= liftIO . atomically . flip writeTVar x
+
 -- Some helpers to make this feel more like a state monad.
-gets :: (appState -> b) -> WebM appState b
-gets f = ask >>= liftIO . readTVarIO >>= return . f
+--gets :: (appState -> b) -> WebM appState b
+--gets f = ask >>= liftIO . readTVarIO >>= return . f
 
-modify :: (appState -> appState) -> WebM appState ()
-modify f = ask >>= liftIO . atomically . flip modifyTVar' f
-
+--modify :: (appState -> appState) -> WebM appState ()
+--modify f = ask >>= liftIO . atomically . flip modifyTVar' f
 
 startScotty port app = do 
     sync <- newTVarIO def  

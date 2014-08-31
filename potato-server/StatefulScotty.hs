@@ -27,6 +27,7 @@ import Data.Default
 import Web.Scotty.Trans
 import Control.Monad.State.Class
 
+import Control.Applicative
 -- Why 'ReaderT (TVar AppState)' rather than 'StateT AppState'?
 -- With a state transformer, 'runActionToIO' (below) would have
 -- to provide the state to _every action_, and save the resulting
@@ -38,7 +39,7 @@ import Control.Monad.State.Class
 -- Also note: your monad must be an instance of 'MonadIO' for
 -- Scotty to use it.
 newtype WebM appState a = WebM { runWebM :: ReaderT (TVar appState) IO a }
-    deriving (Monad, MonadIO, MonadReader (TVar appState))
+    deriving (Monad, MonadIO, MonadReader (TVar appState), Functor, Applicative)
 
 -- Scotty's monads are layered on top of our custom monad.
 -- We define this synonym for lift in order to be explicit

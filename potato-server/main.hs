@@ -2,6 +2,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE TupleSections #-}
 
 module Main where 
 import StatefulScotty
@@ -16,9 +17,14 @@ import qualified Control.Monad.State as S
 import Control.Lens (makeFields, makeLenses, (+=), (^.))
 import Data.Array
 
-data Point = Point Int Int deriving (Show, Eq)
+data Point = Point Int Int deriving (Show, Eq, Ord)
+instance Ix Point where
+    range ((Point minX minY), (Point maxX maxY)) = [(Point x y) | x <- [minX .. maxX], y <- [minY .. maxY]] 
+    inRange ((Point minX minY), (Point maxX maxY)) (Point x y) = and [x >= minX, y >= minY, x <= maxX, y <= maxY] 
+    
+
 data MapField = Land | Water deriving (Show, Eq)
-newtype GameMap = GameMap (Array (Int,Int) MapField)
+newtype GameMap = GameMap { getArray :: Array Point MapField }
 data City = City {
     _name :: String,
     _cityPosition :: Point
@@ -26,19 +32,22 @@ data City = City {
 type BattleValue = Int
 data Player = Redosia | Bluegaria | Greenland | Shitloadnam deriving (Show, Eq, Ord)
 data Unit = Unit {
-    _battleValue :: BattleValue,
+    _BattleValue :: BattleValue,
     _owner :: Player,
     _unitPosition :: Point
     } deriving (Show)
 type Timestamp = Int
 
 data GameState = GameState {
-    _game :: GameMap,
+    _GameMap :: GameMap,
     _cities :: [City],
     _units :: [Unit],
     _timestamp :: Timestamp
     }
 
+makeFields ''GameState
+makeFields ''City
+makeFields ''Unit
 makeLenses ''GameState
 makeLenses ''City
 makeLenses ''Unit
@@ -46,20 +55,27 @@ makeLenses ''Unit
 data Move = Move Point Point deriving (Show, Eq)
 newtype ValidMove = ValidMove Move
 
+-- Various utils
+property = flip (^.)
+
 isValid :: Player -> GameState -> Move -> Bool
-isValid player game (Move start end) = 
-    and [isValidUnitAtStart, isValidDestination]
+isValid player game (Move start end) =
+    and [isNotOutOfBounds, isValidUnitAtStart, isValidDestination, isNotTooFar]
     where
-        --isValidUnitAtStart = not . null . (filter ((== start) . (^. position)) ) $ game ^. units
-        isValidUnitAtStart = False
-        isValidDestination = False
+        gmap = getArray $ game ^. gameMap
+        
+        isNotOutOfBounds = inRange (bounds gmap) start && inRange (bounds gmap) end
+
+        isValidUnitAtStart = not . null . (filter ((== start) . (property position)) ) $ game ^. units
+
+        isValidDestination = (gmap ! end) == Land
+
+        isNotTooFar = (manhattanDistance start end) <= 3
+            where manhattanDistance (Point x1 y1) (Point x2 y2) = abs (x2-x1) + abs (y2-y1)
       
-
-validate :: Player -> GameState -> Move -> Maybe ValidMove
-validate player game move = if (isValid player game move) then (Just $ ValidMove move) else Nothing
-
-move :: ValidMove -> GameState -> GameState
-move _ g = g
+-- |Returns Just new game state if the move is valid, nothing otherwise.
+move :: Player -> Move -> GameState -> Maybe GameState
+move p m g = if (isValid p g m) then Just g else Nothing
 
 instance Default GameState where
     def = GameState initialMap [] [] 0
@@ -114,11 +130,14 @@ instance ToJSON Unit where
 instance ToJSON Point where
     toJSON (Point x y) = object ["x" .= x, "y" .= y]
 
-initialMap = GameMap $ array ((0,0),(9,9)) [((x,y), Land) | x <- [0..9], y <- [0..9]]
-
+initialMap = GameMap $ array mapRange (map (,Land) $ range mapRange)
+             where
+                 mapRange = ((Point 0 0), (Point 9 9))
+                
 instance ToJSON GameMap where
     toJSON (GameMap a) = toJSON . toListOfLists $ a
-        where xSpan = [(fst . fst $ bounds a) .. (fst . snd $ bounds a)]
-              ySpan = [(snd . fst $ bounds a) .. (snd . snd $ bounds a)]
-              row y = [a ! (x,y) | x <- xSpan ]
+        where ((Point minX minY), (Point maxX maxY)) = bounds a
+              xSpan = [minX .. maxX]
+              ySpan = [minY .. maxY]
+              row y = [a ! (Point x y) | x <- xSpan ]
               toListOfLists a = [row y | y <- ySpan]

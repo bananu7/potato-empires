@@ -57,9 +57,6 @@ makeLenses ''Unit
 
 data Move = Move Point Point deriving (Show, Eq)
 
--- Various utils
-property = flip (^.)
-
 isValid :: Player -> GameState -> Move -> Bool
 isValid player game (Move start end) =
     and [isNotOutOfBounds, isValidUnitAtStart, isValidDestination, isNotTooFar]
@@ -68,7 +65,7 @@ isValid player game (Move start end) =
         
         isNotOutOfBounds = inRange (bounds gmap) start && inRange (bounds gmap) end
 
-        isValidUnitAtStart = not . null . (filter ((== start) . (property position)) ) $ game ^. units
+        isValidUnitAtStart = not . null . (filter ((== start) . (^. position)) ) $ game ^. units
 
         isValidDestination = (gmap ! end) == Land
 

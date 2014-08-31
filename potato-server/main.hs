@@ -21,7 +21,10 @@ data Point = Point Int Int deriving (Show, Eq, Ord)
 instance Ix Point where
     range ((Point minX minY), (Point maxX maxY)) = [(Point x y) | x <- [minX .. maxX], y <- [minY .. maxY]] 
     inRange ((Point minX minY), (Point maxX maxY)) (Point x y) = and [x >= minX, y >= minY, x <= maxX, y <= maxY] 
-    
+   
+    -- implemented the same as default (a,b) Ix instance
+    index r@((Point l1 l2), (Point u1 u2)) p@(Point i1 i2) | inRange r p = index (l1,u1) i1 * rangeSize (l2,u2) + index (l2,u2) i2 
+                                                           | otherwise = error "Out of range"                                                           
 
 data MapField = Land | Water deriving (Show, Eq)
 newtype GameMap = GameMap { getArray :: Array Point MapField }
@@ -53,7 +56,6 @@ makeLenses ''City
 makeLenses ''Unit
 
 data Move = Move Point Point deriving (Show, Eq)
-newtype ValidMove = ValidMove Move
 
 -- Various utils
 property = flip (^.)
@@ -137,7 +139,5 @@ initialMap = GameMap $ array mapRange (map (,Land) $ range mapRange)
 instance ToJSON GameMap where
     toJSON (GameMap a) = toJSON . toListOfLists $ a
         where ((Point minX minY), (Point maxX maxY)) = bounds a
-              xSpan = [minX .. maxX]
-              ySpan = [minY .. maxY]
-              row y = [a ! (Point x y) | x <- xSpan ]
-              toListOfLists a = [row y | y <- ySpan]
+              row y = [ a ! (Point x y) | x <- [minX .. maxX]]
+              toListOfLists a = [ row y | y <- [minY .. maxY]]

@@ -48,11 +48,12 @@ data MapField = MapField {
 type GameMap = Array Point MapField
 
 type BattleValue = Int
-data Player = Redosia | Bluegaria | Greenland | Shitloadnam deriving (Show, Eq, Ord)
+data Player = Redosia | Bluegaria | Greenland | Shitloadnam deriving (Show, Eq, Ord, Enum)
 type Timestamp = Int
 
 data GameState = GameState {
     _GameMap :: GameMap,
+    _CurrentPlayer :: Player,
     _timestamp :: Timestamp
 }
 
@@ -87,11 +88,15 @@ move :: Player -> Move -> GameState -> Maybe GameState
 move p m@(Move start end) g = if (isValid p g m) then Just applyMove else Nothing
                                where
                                 aUnit = (g ^. gameMap) ! start ^. unit
-                                
                                 changeMap = (ix end . unit .~ aUnit) . 
                                             (ix start . unit .~ Nothing)
-                               
                                 applyMove = g & gameMap %~ changeMap
+                                				 & timestamp %~ (+1)
+                                				 & currentPlayer %~ nextPlayer
+
+nextPlayer :: Player -> Player
+nextPlayer Shitloadnam = Redosia
+nextPlayer x = succ x
                                 
 getFieldElemList elem game = elems
     where 

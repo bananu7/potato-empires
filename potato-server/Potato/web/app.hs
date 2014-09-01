@@ -11,8 +11,8 @@ import Potato.Game
 import Potato.Web.Serialization
 import Potato.Web.Types
 import StatefulScotty
-import Web.Scotty.Trans hiding (get)
-import qualified Web.Scotty.Trans as Scotty (get)
+import Web.Scotty.Trans hiding (get, post)
+import qualified Web.Scotty.Trans as Scotty (get, post)
 import Data.Aeson.Types hiding (Array)
 import Data.Default
 import Data.String
@@ -24,21 +24,22 @@ import Control.Lens hiding (index, (.=))
 import Data.Array
 import Data.Array.IArray (amap)
 import Data.Maybe
-import Data.HashMap.Strict (union)
+import Data.Aeson (decode)
+import Network.HTTP.Types
+
 
 setCorsHeader = setHeader "Access-Control-Allow-Origin" "*"
 
-get r a = Scotty.get r $ do
+executeWithCors method r action = method r $ do
     setCorsHeader
-    a
+    action
+
+post = executeWithCors Scotty.post
+get = executeWithCors Scotty.get
 
 app :: ScottyT Text (WebM GameState) ()
 app = do
     middleware logStdoutDev
-
-    get "/test" $ do
-        t <- webM $ gets _timestamp
-        text $ fromString $ show t
 
     get "/cities" $ do
         game <- webM S.get 
@@ -52,7 +53,7 @@ app = do
         game <- webM S.get
         json $ getFieldTypesList game
 
-    get "/addunit" $ do
+    get "/units/add" $ do
         let myNewUnit = (Unit 99 Redosia)
         webM $ gameMap %= (ix (Point 1 1) . unit .~ Just myNewUnit)
         redirect "/units"
@@ -61,6 +62,17 @@ app = do
         game <- webM S.get
         json $ createInitialStatePacket game
 
-    get "/plusone" $ do
-        webM $ timestamp += 1
-        redirect "/test"
+    post "/move" $ do
+        MovePacket from to <- jsonData
+        game <- webM S.get
+        let result = move (game ^. currentPlayer) (Move from to) game
+        case result of 
+            Just newState -> do 
+                webM $ S.put newState
+                json $ object []
+            Nothing -> do
+                status $ status400
+                text "Invalid move"
+
+    get "/test" $ do
+        json $ MovePacket (Point 0 1) (Point 1 2)

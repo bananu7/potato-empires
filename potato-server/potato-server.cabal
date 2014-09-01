@@ -50,5 +50,7 @@ executable potato-server
   other-modules: Potato.Game, Potato.Web.App, Potato.Web.Types, Potato.Web.Serialization
   
   -- Other library packages from which modules are imported.
-  build-depends:       base==4.7.*, random-extras, aeson, scotty, lens > 4, mtl, wai-extra, text, data-default, stm, array, unordered-containers
+  build-depends:       base==4.7.*, random-extras, aeson, scotty, lens > 4,
+                       mtl, wai-extra, text, data-default, stm, array, unordered-containers,
+                       http-types
   

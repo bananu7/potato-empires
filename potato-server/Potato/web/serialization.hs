@@ -5,6 +5,8 @@ import Potato.Game
 import Potato.Web.Types
 import Data.Maybe
 import Data.HashMap.Strict (union)
+import Control.Applicative
+import Control.Monad
 
 unionObjects (Object a) (Object b) = a `union` b
 combinePairs :: (ToJSON a, ToJSON b) => [(a,b)] -> [Object]
@@ -43,3 +45,17 @@ instance ToJSON Unit where
 
 instance ToJSON Point where
     toJSON (Point x y) = object ["x" .= x, "y" .= y]
+instance FromJSON Point where
+    parseJSON (Object v) = Point <$>
+                      v .: "x" <*>
+                      v .: "y"
+    parseJSON _          = mzero
+
+
+instance ToJSON MovePacket where
+  toJSON (MovePacket from to) = object ["from" .= from, "to" .= to]
+instance FromJSON MovePacket where
+    parseJSON (Object v) = MovePacket <$>
+                      v .: "from" <*>
+                      v .: "to"
+    parseJSON _          = mzero

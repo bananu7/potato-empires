@@ -48,7 +48,7 @@ data MapField = MapField {
 type GameMap = Array Point MapField
 
 type BattleValue = Int
-data Player = Redosia | Bluegaria | Greenland | Shitloadnam deriving (Show, Eq, Ord, Enum)
+data Player = Redosia | Shitloadnam deriving (Show, Eq, Ord, Enum)
 type Timestamp = Int
 
 data GameState = GameState {
@@ -75,7 +75,10 @@ isValid player game (Move start end) =
         
         isNotOutOfBounds = inRange (bounds gmap) start && inRange (bounds gmap) end
 
-        isValidUnitAtStart = isJust $ (gmap ! start) ^. unit
+        maybeUnitAtStart = (gmap ! start) ^. unit
+        isValidUnitAtStart = case maybeUnitAtStart of
+        	Just unit -> unit ^. owner == game ^. currentPlayer
+        	Nothing -> False
 
         isValidDestination = (isNothing $ (gmap ! end) ^. unit) &&
                              ((== Land) $ (gmap ! end) ^. fieldType)

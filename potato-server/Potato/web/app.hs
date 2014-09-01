@@ -73,6 +73,3 @@ app = do
             Nothing -> do
                 status $ status400
                 text "Invalid move"
-
-    get "/test" $ do
-        json $ MovePacket (Point 0 1) (Point 1 2)

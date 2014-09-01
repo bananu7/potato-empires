@@ -206,8 +206,8 @@ var initializePotato = function () {
       tiles: []
     },
 
-    cities: [{x: 1, y: 1}],
-    units: [{x: 3, y: 3}],
+    cities: [],
+    units: [],
 
     selectionState: 'FREE',
     selectedUnit: null
@@ -219,22 +219,21 @@ var initializePotato = function () {
   // Load first frame
   getInitialState(game).done(function (data) {
     game.canvas = $('<canvas/>').attr({
-    width: game.board.width * game.board.tileSize,
-    height: game.board.height * game.board.tileSize
+      width: game.board.width * game.board.tileSize,
+      height: game.board.height * game.board.tileSize
     })
     .appendTo('body')
     .mousemove(function (event) {
-    updateMouse(game, event);
+      updateMouse(game, event);
     })
     .click(function (event) {
-    handleClick(game);
+      handleClick(game);
     });
     
     game.ctx = game.canvas.get(0).getContext('2d');
-  
-      
+
     // From then on just refresh units
-    //setInterval(function () { updateUnits(game); }, 1000);
+    setInterval(function () { updateUnits(game); }, 1000);
 
     // Also start drawing
     setInterval(function () { render(game); }, 30)
@@ -260,6 +259,7 @@ var handleClick = function (game, event) {
       }
       break;
     case 'UNIT':
+      var unit = findUnitAt(game, game.mouse.x, game.mouse.y);
       // this is a move order
       // issue move order to server (modulo checks?)
       // can also update interaction renders
@@ -268,8 +268,8 @@ var handleClick = function (game, event) {
 }
 
 var updateUnits = function (game) {
-  $.get('/units', function (data) {
-    game.units = units;
+  $.get('http://localhost:3000/units', function (data) {
+    game.units = data.units;
   });
 };
 

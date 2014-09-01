@@ -5,23 +5,19 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
+module Potato.Game where 
 
-module Main where 
-import StatefulScotty
-import Web.Scotty.Trans hiding (get)
-import qualified Web.Scotty.Trans as Scotty (get)
-import Data.Aeson.Types hiding (Array)
 import Data.Default
 import Data.String
 import Data.Text.Lazy (Text)
 import Data.Text.Lazy.Encoding (decodeUtf8)
-import Network.Wai.Middleware.RequestLogger
 import qualified Control.Monad.State as S
 import Control.Lens hiding (index, (.=))
 import Data.Array
 import Data.Array.IArray (amap)
 import Data.Maybe
 import Data.HashMap.Strict (union)
+
 
 data Point = Point Int Int deriving (Show, Eq, Ord)
 instance Ix Point where
@@ -55,6 +51,9 @@ data GameState = GameState {
     _GameMap :: GameMap,
     _timestamp :: Timestamp
     }
+
+instance Default GameState where
+    def = GameState initialMap 0
 
 makeLenses ''MapField
 makeFields ''GameState
@@ -93,9 +92,6 @@ move p m@(Move start end) g = if (isValid p g m) then Just applyMove else Nothin
                                
                                 applyMove = g & gameMap %~ changeMap
                                 
-instance Default GameState where
-    def = GameState initialMap 0
-
 getFieldElemList elem game = elems
     where 
         gmap = game ^. gameMap
@@ -111,106 +107,3 @@ getFieldTypesList game = toListOfLists $ amap (view fieldType) gmap
            where
               row y = [ a ! (Point x y) | x <- [minX .. maxX]]
               ((Point minX minY), (Point maxX maxY)) = bounds a
-
-setCorsHeader = setHeader "Access-Control-Allow-Origin" "*"
-
-get r a = Scotty.get r $ do
-    setCorsHeader
-    a
-
-app :: ScottyT Text (WebM GameState) ()
-app = do
-    middleware logStdoutDev
-
-    get "/test" $ do
-        t <- webM $ gets _timestamp
-        text $ fromString $ show t
-
-    get "/cities" $ do
-        game <- webM S.get 
-        json $ getCitiesList game
-
-    get "/units" $ do 
-        game <- webM S.get
-        json $ getUnitsList game
-
-    get "/map" $ do
-        game <- webM S.get
-        json $ getFieldTypesList game
-
-    get "/addunit" $ do
-        --webM $ S.modify $ \ st -> st { _units = (Unit 99 Redosia (Point 0 0)) : _units st }
-        let myNewUnit = (Unit 99 Redosia)
-        webM $ gameMap %= (ix (Point 1 1) . unit .~ Just myNewUnit)
-        redirect "/units"
-    
-    get "/" $ do
-        game <- webM S.get
-        json $ createInitialStatePacket game
-
-    get "/plusone" $ do
-        webM $ timestamp += 1
-        redirect "/test"
-
-main = startScotty 3000 app
-
-
-
---data InitalStatePacket = InitalStatePacket GameMap Timestamp
-data InitialStatePacket = InitialStatePacket [[FieldType]] [(Point, Unit)] [(Point, City)] Timestamp
-createInitialStatePacket :: GameState -> InitialStatePacket
-createInitialStatePacket game =
-    InitialStatePacket 
-        (getFieldTypesList game)
-        (getUnitsList game)
-        (getCitiesList game)
-        (game ^. timestamp)
-
-instance ToJSON InitialStatePacket where
-    toJSON (InitialStatePacket fields units cities timestamp) = object [
-              "map" .= fields,
-              "cities" .= combinePairs cities,
-              "units" .= combinePairs units,
-              "timestamp" .= timestamp]
-        where
-            unionObjects (Object a) (Object b) = a `union` b
-            combinePairs :: (ToJSON a, ToJSON b) => [(a,b)] -> [Object]
-            combinePairs = map (\(a,b) -> (toJSON a) `unionObjects` (toJSON b))
-
---data UpdatePacket = UpdatePacket [Unit] Timestamp
--- data MovePacket = MovePacket Point Point
--- 
-
-instance Show MapField where
-    show (MapField f u c) = fs ++ us ++ cs
-        where fs = show f
-              us = if isJust u then show (fromJust u)
-                               else ""
-              cs = if isJust c then show (fromJust c)
-                               else ""
-
-instance ToJSON MapField where
-    toJSON = toJSON . show
-
-instance ToJSON FieldType where
-    toJSON f | f == Land = String "grass"
-             | f == Water = String "water" 
-
-instance ToJSON Player where
-    toJSON = toJSON . show
-
-instance ToJSON City where
-    toJSON (City name) = object ["name" .= name]
-
-instance ToJSON Unit where
-    toJSON (Unit value owner) = object ["value" .= value, "owner" .= owner]
-
-instance ToJSON Point where
-    toJSON (Point x y) = object ["x" .= x, "y" .= y]
-
-initialMap = emptyMap & (ix (Point 0 1).unit) `set` (Just $ Unit 12 Redosia)
-                      & (ix (Point 2 2).city) `set` (Just $ City "Cityville")
-             where
-                 emptyMap = array mapRange (map (,MapField Land Nothing Nothing) $ range mapRange)
-                 mapRange = ((Point 0 0), (Point 9 9))
-               

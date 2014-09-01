@@ -25,7 +25,7 @@ license:             MIT
 license-file:        LICENSE
 
 -- The package author(s).
-author:              BB&JG[5~[D[D[D [C  & JG
+author:              Bartosz Banachewicz, Marcin Goliński
 
 -- An email address to which users can send suggestions, bug reports, and 
 -- patches.
@@ -44,10 +44,10 @@ cabal-version:       >=1.8
 
 executable potato-server
   -- .hs or .lhs file containing the Main module.
-  main-is: main.hs
+  main-is: potato/main.hs
   
   -- Modules included in this executable, other than Main.
-  -- other-modules:       
+  other-modules: Potato.Game, Potato.Serialization
   
   -- Other library packages from which modules are imported.
   build-depends:       base==4.7.*, random-extras, aeson, scotty, lens > 4, mtl, wai-extra, text, data-default, stm, array, unordered-containers

@@ -18,6 +18,7 @@ import Network.Wai.Middleware.RequestLogger
 import qualified Control.Monad.State as S
 import Control.Lens hiding (index, (.=))
 import Data.Array
+import Data.Array.IArray (amap)
 import Data.Maybe
 
 data Point = Point Int Int deriving (Show, Eq, Ord)
@@ -93,6 +94,22 @@ move p m@(Move start end) g = if (isValid p g m) then Just applyMove else Nothin
 instance Default GameState where
     def = GameState initialMap 0
 
+getFieldElemList elem game = elems
+    where 
+        gmap = game ^. gameMap
+        pointsAndFields = (assocs gmap) ^.. traversed.(filtered (\(pos, field) -> isJust $ field ^. elem))
+        elems = map (\(point, field) -> (point, fromJust $ field ^. elem)) pointsAndFields
+
+getCitiesList = getFieldElemList city
+getUnitsList = getFieldElemList unit
+
+getFieldTypesList game = toListOfLists $ amap (view fieldType) gmap
+    where gmap = game ^. gameMap
+          toListOfLists a = [ row y | y <- [minY .. maxY]]
+           where
+              row y = [ a ! (Point x y) | x <- [minX .. maxX]]
+              ((Point minX minY), (Point maxX maxY)) = bounds a
+
 app :: ScottyT Text (WebM GameState) ()
 app = do
     middleware logStdoutDev
@@ -101,16 +118,27 @@ app = do
         t <- webM $ gets _timestamp
         text $ fromString $ show t
 
---    get "/units" $ do
-        --units <- webM $ S.gets >>= 
-        --json units
+    get "/cities" $ do
+        game <- webM S.get 
+        json $ getCitiesList game
+
+    get "/units" $ do 
+        game <- webM S.get
+        json $ getUnitsList game
+
+    get "/map" $ do
+        game <- webM S.get
+        json $ getFieldTypesList game
 
     get "/addunit" $ do
         --webM $ S.modify $ \ st -> st { _units = (Unit 99 Redosia (Point 0 0)) : _units st }
-        redirect "/test"
-
+        let myNewUnit = (Unit 99 Redosia)
+        webM $ gameMap %= (ix (Point 1 1) . unit .~ Just myNewUnit)
+        redirect "/units"
+    
     get "/" $ do
-        json initialMap
+        game <- webM S.get
+        json $ createInitialStatePacket game
 
     get "/plusone" $ do
         webM $ timestamp += 1
@@ -118,15 +146,28 @@ app = do
 
 main = startScotty 3000 app
 
-data InitalStatePacket = InitalStatePacket GameMap [City] [Unit] Timestamp
-data UpdatePacket = UpdatePacket [Unit] Timestamp
-data MovePacket = MovePacket Point Point
 
-instance ToJSON InitalStatePacket where
-    toJSON (InitalStatePacket gameMap cities units timestamp) = object ["map" .= gameMap,
-             "cities" .= cities,
-             "units" .= units,
-             "timestamp" .= timestamp]
+
+--data InitalStatePacket = InitalStatePacket GameMap Timestamp
+data InitialStatePacket = InitialStatePacket [[FieldType]] [(Point, Unit)] [(Point, City)] Timestamp
+createInitialStatePacket :: GameState -> InitialStatePacket
+createInitialStatePacket game =
+    InitialStatePacket 
+        (getFieldTypesList game)
+        (getUnitsList game)
+        (getCitiesList game)
+        (game ^. timestamp)
+
+instance ToJSON InitialStatePacket where
+    toJSON (InitialStatePacket fields units cities timestamp) = object [
+              "map" .= fields,
+              "cities" .= cities,
+              "units" .= units,
+              "timestamp" .= timestamp]
+
+--data UpdatePacket = UpdatePacket [Unit] Timestamp
+-- data MovePacket = MovePacket Point Point
+-- 
 
 instance Show MapField where
     show (MapField f u c) = fs ++ us ++ cs
@@ -137,6 +178,9 @@ instance Show MapField where
                                else ""
 
 instance ToJSON MapField where
+    toJSON = toJSON . show
+
+instance ToJSON FieldType where
     toJSON = toJSON . show
 
 instance ToJSON Player where
@@ -151,12 +195,9 @@ instance ToJSON Unit where
 instance ToJSON Point where
     toJSON (Point x y) = object ["x" .= x, "y" .= y]
 
-initialMap = array mapRange (map (,MapField Land Nothing Nothing) $ range mapRange)
+initialMap = emptyMap & (ix (Point 0 1).unit) `set` (Just $ Unit 12 Redosia)
+                & (ix (Point 2 2).city) `set` (Just $ City "Cityville")
              where
-                 mapRange = ((Point 0 0), (Point 9 9))
-                
-instance ToJSON GameMap where
-    toJSON a = toJSON . toListOfLists $ a
-        where ((Point minX minY), (Point maxX maxY)) = bounds a
-              row y = [ a ! (Point x y) | x <- [minX .. maxX]]
-              toListOfLists a = [ row y | y <- [minY .. maxY]]
+                 emptyMap = array mapRange (map (,MapField Land Nothing Nothing) $ range mapRange)
+                 mapRange = ((Point 0 0), (Point 5 5))
+               

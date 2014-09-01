@@ -1,6 +1,15 @@
 'use strict';
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// CONFIG
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+var config = {
+    serverUrl: "http://localhost:3000",
+    updateInterval: 1000
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // RESOURCE LOADING AND GENERATION
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -152,10 +161,10 @@ var renderSelectedUnit = function (game) {
   // 3-block radius that is not water
   game.ctx.beginPath();
 
-  findPossibleMoves(game, unit).forEach(function(p) {
+  findPossibleMoves(game, unit).forEach(function(point) {
     game.ctx.rect(
-      p.x * game.board.tileSize,
-      p.y * game.board.tileSize,
+      point.x * game.board.tileSize,
+      point.y * game.board.tileSize,
       game.board.tileSize,
       game.board.tileSize
     );
@@ -216,7 +225,7 @@ var initializePotato = function () {
     game.ctx = game.canvas.get(0).getContext('2d');
 
     // From then on just refresh units
-    setInterval(function () { updateUnits(game); }, 1000);
+    //setInterval(function () { updateUnits(game); }, config.updateInterval);
 
     // Also start drawing
     setInterval(function () { render(game); }, 30)
@@ -245,20 +254,34 @@ var handleClick = function (game, event) {
       // this is a move order
       // issue move order to server (modulo checks?)
       // can also update interaction renders
-      var unit = findUnitAt(game, game.mouse.x, game.mouse.y);
+      var possibleMoves = findPossibleMoves(game, game.selectedUnit);
+      
+      var compareByXY = function(a,b) { return a.x === b.x && a.y === b.y; };
+      var isEqualToMouse = function(p) { return compareByXY(p, game.mouse); };
+        
+      if (possibleMoves.filter(isEqualToMouse).length === 0) {
+          break;
+      }
+      
+      var moveData = {
+          from: { x: game.selectedUnit.x, y: game.selectedUnit.y },
+          to: { x: game.mouse.x, y: game.mouse.y }
+      };
 
+      $.post(config.serverUrl + '/move', JSON.stringify(moveData));
+        
       break;
   }
 }
 
 var updateUnits = function (game) {
-  $.get('http://localhost:3000/units', function (data) {
+  $.get(config.serverUrl + '/units', function (data) {
     game.units = data.units;
   });
 };
 
 var getInitialState = function(game) {
-  return $.getJSON('http://localhost:3000/', function (data) {
+  return $.getJSON(config.serverUrl, function (data) {
     console.log(data);
     game.units = data.units;
     game.cities = data.cities;

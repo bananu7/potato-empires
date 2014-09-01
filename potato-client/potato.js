@@ -225,7 +225,7 @@ var initializePotato = function () {
     game.ctx = game.canvas.get(0).getContext('2d');
 
     // From then on just refresh units
-    //setInterval(function () { updateUnits(game); }, config.updateInterval);
+    setInterval(function () { updateUnits(game); }, config.updateInterval);
 
     // Also start drawing
     setInterval(function () { render(game); }, 30)
@@ -254,12 +254,18 @@ var handleClick = function (game, event) {
       // this is a move order
       // issue move order to server (modulo checks?)
       // can also update interaction renders
+        
+      var deselectUnit = function(game) { 
+          game.selectionState = 'FREE';
+          game.selectedUnit = null;
+      };
       var possibleMoves = findPossibleMoves(game, game.selectedUnit);
       
       var compareByXY = function(a,b) { return a.x === b.x && a.y === b.y; };
       var isEqualToMouse = function(p) { return compareByXY(p, game.mouse); };
         
       if (possibleMoves.filter(isEqualToMouse).length === 0) {
+          deselectUnit(game);
           break;
       }
       
@@ -270,6 +276,7 @@ var handleClick = function (game, event) {
 
       $.post(config.serverUrl + '/move', JSON.stringify(moveData));
         
+      deselectUnit(game);
       break;
   }
 }

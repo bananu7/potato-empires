@@ -152,31 +152,14 @@ var renderSelectedUnit = function (game) {
   // 3-block radius that is not water
   game.ctx.beginPath();
 
-  for (var y = unit.y - 1; y <= unit.y + 1; ++y) {
-    // Bounds check
-    if (y < 0 || y >= game.board.height) {
-      continue;
-    }
-
-    for (var x = unit.x - 1; x <= unit.x + 1; ++x) {
-      // Bounds check
-      if (x < 0 || x >= game.board.width) {
-        continue;
-      }
-
-      // Skip water
-      if (game.board.tiles[y][x] === 'water') {
-        continue;
-        
-      }
-      game.ctx.rect(
-        x * game.board.tileSize,
-        y * game.board.tileSize,
-        game.board.tileSize,
-        game.board.tileSize
-      );
-    }
-  }
+  findPossibleMoves(game, unit).forEach(function(p) {
+    game.ctx.rect(
+      p.x * game.board.tileSize,
+      p.y * game.board.tileSize,
+      game.board.tileSize,
+      game.board.tileSize
+    );
+  });
 
   game.ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
   game.ctx.fill();
@@ -259,10 +242,11 @@ var handleClick = function (game, event) {
       }
       break;
     case 'UNIT':
-      var unit = findUnitAt(game, game.mouse.x, game.mouse.y);
       // this is a move order
       // issue move order to server (modulo checks?)
       // can also update interaction renders
+      var unit = findUnitAt(game, game.mouse.x, game.mouse.y);
+
       break;
   }
 }
@@ -291,3 +275,29 @@ var findUnitAt = function (game, x, y) {
 
   return result.length === 0 ? null : result[0];
 };
+
+var findPossibleMoves = function (game, unit) {
+  var possibleMoves = [];
+  for (var y = unit.y - 1; y <= unit.y + 1; ++y) {
+    // Bounds check
+    if (y < 0 || y >= game.board.height) {
+      continue;
+    }
+
+    for (var x = unit.x - 1; x <= unit.x + 1; ++x) {
+      // Bounds check
+      if (x < 0 || x >= game.board.width) {
+        continue;
+      }
+
+      // Skip water
+      if (game.board.tiles[y][x] === 'water') {
+        continue;
+      }
+
+      possibleMoves.push({ x: x, y : y});
+    }
+  }
+  return possibleMoves;
+}
+

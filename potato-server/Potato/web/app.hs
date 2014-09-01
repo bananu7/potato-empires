@@ -42,11 +42,11 @@ app = do
 
     get "/cities" $ do
         game <- webM S.get 
-        json $ getCitiesList game
+        json $ object ["cities" .= (combinePairs $ getCitiesList game)]
 
     get "/units" $ do 
         game <- webM S.get
-        json $ getUnitsList game
+        json $ object ["units" .= (combinePairs $ getUnitsList game)]
 
     get "/map" $ do
         game <- webM S.get

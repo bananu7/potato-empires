@@ -54,8 +54,12 @@ type Timestamp = Int
 data GameState = GameState {
     _GameMap :: GameMap,
     _CurrentPlayer :: Player,
-    _timestamp :: Timestamp
+    _timestamp :: Timestamp,
+    _currentPlayerMoves :: Int
 }
+
+createGameState m = GameState m Redosia 0 defaultPlayerMoves
+defaultPlayerMoves = 2
 
 makeLenses ''MapField
 makeFields ''GameState
@@ -95,7 +99,11 @@ move p m@(Move start end) g = if (isValid p g m) then Just applyMove else Nothin
                                             (ix start . unit .~ Nothing)
                                 applyMove = g & gameMap %~ changeMap
                                 				 & timestamp %~ (+1)
-                                				 & currentPlayer %~ nextPlayer
+                                				 & deductPlayerMove
+                                deductPlayerMove = if g ^. currentPlayerMoves == 1 
+                                				 	then (currentPlayer %~ nextPlayer) . (currentPlayerMoves `set` defaultPlayerMoves)
+                                				 	else currentPlayerMoves %~ (subtract 1)
+
 
 nextPlayer :: Player -> Player
 nextPlayer Shitloadnam = Redosia

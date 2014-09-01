@@ -35,4 +35,4 @@ initialMap = emptyMap & (ix (Point 0 1).unit) `set` (Just $ Unit 12 Redosia)
                  mapRange = ((Point 0 0), (Point 9 9))
                
 instance Default GameState where
-  def = GameState initialMap Redosia 0
+  def = createGameState initialMap

@@ -198,8 +198,8 @@ var initializePotato = function () {
     },
 
     board: {
-      width: 20,
-      height: 20,
+      width: 1,
+      height: 1,
 
       tileSize: 40,
 
@@ -214,33 +214,31 @@ var initializePotato = function () {
   };
 
   game.images = loadImages('img');
-  game.board.tiles = makeTiles(game);
-
-  game.canvas = $('<canvas/>').attr({
+  //game.board.tiles = makeTiles(game);
+    
+  // Load first frame
+  getInitialState(game).done(function (data) {
+    game.canvas = $('<canvas/>').attr({
     width: game.board.width * game.board.tileSize,
     height: game.board.height * game.board.tileSize
-  })
-  .appendTo('body')
-  .mousemove(function (event) {
+    })
+    .appendTo('body')
+    .mousemove(function (event) {
     updateMouse(game, event);
-  })
-  .click(function (event) {
+    })
+    .click(function (event) {
     handleClick(game);
-  });
-
-  game.ctx = game.canvas.get(0).getContext('2d');
-
-  // Load first frame
-  //$.get('/first', function (data) {
-  //  game.board.tiles = data.map;
-  //  game.cities = data.cities;
-
+    });
+    
+    game.ctx = game.canvas.get(0).getContext('2d');
+  
+      
     // From then on just refresh units
     //setInterval(function () { updateUnits(game); }, 1000);
 
     // Also start drawing
     setInterval(function () { render(game); }, 30)
-  //});
+  });
 };
 
 var updateMouse = function (game, event) {
@@ -272,6 +270,17 @@ var handleClick = function (game, event) {
 var updateUnits = function (game) {
   $.get('/units', function (data) {
     game.units = units;
+  });
+};
+
+var getInitialState = function(game) {
+  return $.getJSON('http://localhost:3000/', function (data) {
+    console.log(data);
+    game.units = data.units;
+    game.cities = data.cities;
+    game.board.width = data.map[0].length;
+    game.board.height = data.map.length;
+    game.board.tiles = data.map;
   });
 };
 

@@ -8,7 +8,8 @@
 
 module Main where 
 import StatefulScotty
-import Web.Scotty.Trans
+import Web.Scotty.Trans hiding (get)
+import qualified Web.Scotty.Trans as Scotty (get)
 import Data.Aeson.Types hiding (Array)
 import Data.Default
 import Data.String
@@ -20,6 +21,7 @@ import Control.Lens hiding (index, (.=))
 import Data.Array
 import Data.Array.IArray (amap)
 import Data.Maybe
+import Data.HashMap.Strict (union)
 
 data Point = Point Int Int deriving (Show, Eq, Ord)
 instance Ix Point where
@@ -110,6 +112,12 @@ getFieldTypesList game = toListOfLists $ amap (view fieldType) gmap
               row y = [ a ! (Point x y) | x <- [minX .. maxX]]
               ((Point minX minY), (Point maxX maxY)) = bounds a
 
+setCorsHeader = setHeader "Access-Control-Allow-Origin" "*"
+
+get r a = Scotty.get r $ do
+    setCorsHeader
+    a
+
 app :: ScottyT Text (WebM GameState) ()
 app = do
     middleware logStdoutDev
@@ -161,9 +169,13 @@ createInitialStatePacket game =
 instance ToJSON InitialStatePacket where
     toJSON (InitialStatePacket fields units cities timestamp) = object [
               "map" .= fields,
-              "cities" .= cities,
-              "units" .= units,
+              "cities" .= combinePairs cities,
+              "units" .= combinePairs units,
               "timestamp" .= timestamp]
+        where
+            unionObjects (Object a) (Object b) = a `union` b
+            combinePairs :: (ToJSON a, ToJSON b) => [(a,b)] -> [Object]
+            combinePairs = map (\(a,b) -> (toJSON a) `unionObjects` (toJSON b))
 
 --data UpdatePacket = UpdatePacket [Unit] Timestamp
 -- data MovePacket = MovePacket Point Point
@@ -181,7 +193,8 @@ instance ToJSON MapField where
     toJSON = toJSON . show
 
 instance ToJSON FieldType where
-    toJSON = toJSON . show
+    toJSON f | f == Land = String "grass"
+             | f == Water = String "water" 
 
 instance ToJSON Player where
     toJSON = toJSON . show
@@ -196,8 +209,8 @@ instance ToJSON Point where
     toJSON (Point x y) = object ["x" .= x, "y" .= y]
 
 initialMap = emptyMap & (ix (Point 0 1).unit) `set` (Just $ Unit 12 Redosia)
-                & (ix (Point 2 2).city) `set` (Just $ City "Cityville")
+                      & (ix (Point 2 2).city) `set` (Just $ City "Cityville")
              where
                  emptyMap = array mapRange (map (,MapField Land Nothing Nothing) $ range mapRange)
-                 mapRange = ((Point 0 0), (Point 5 5))
+                 mapRange = ((Point 0 0), (Point 9 9))
                

@@ -6,9 +6,10 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
 
-module Potato.Main where 
+module Potato.Web.App where 
 import Potato.Game
-import Potato.Serialization
+import Potato.Web.Serialization
+import Potato.Web.Types
 import StatefulScotty
 import Web.Scotty.Trans hiding (get)
 import qualified Web.Scotty.Trans as Scotty (get)
@@ -63,23 +64,3 @@ app = do
     get "/plusone" $ do
         webM $ timestamp += 1
         redirect "/test"
-
-main = startScotty 3000 app
-
-data InitialStatePacket = InitialStatePacket [[FieldType]] [(Point, Unit)] [(Point, City)] Timestamp
-createInitialStatePacket :: GameState -> InitialStatePacket
-createInitialStatePacket game =
-    InitialStatePacket 
-        (getFieldTypesList game)
-        (getUnitsList game)
-        (getCitiesList game)
-        (game ^. timestamp)
-
-
-
-initialMap = emptyMap & (ix (Point 0 1).unit) `set` (Just $ Unit 12 Redosia)
-                      & (ix (Point 2 2).city) `set` (Just $ City "Cityville")
-             where
-                 emptyMap = array mapRange (map (,MapField Land Nothing Nothing) $ range mapRange)
-                 mapRange = ((Point 0 0), (Point 9 9))
-               

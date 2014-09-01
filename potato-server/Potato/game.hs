@@ -26,8 +26,19 @@ instance Ix Point where
    
     -- implemented the same as default (a,b) Ix instance
     index r@((Point l1 l2), (Point u1 u2)) p@(Point i1 i2) | inRange r p = index (l1,u1) i1 * rangeSize (l2,u2) + index (l2,u2) i2 
-                                                           | otherwise = error "Out of range"                                                           
+                                                           | otherwise = error "Out of range"
+
 data FieldType = Land | Water deriving (Show, Eq)
+
+data City = City {
+    _name :: String
+} deriving (Show)
+
+data Unit = Unit {
+    _BattleValue :: BattleValue,
+    _owner :: Player
+} deriving (Show)
+
 data MapField = MapField { 
     _FieldType :: FieldType,
     _city :: Maybe City,
@@ -36,24 +47,14 @@ data MapField = MapField {
 
 type GameMap = Array Point MapField
 
-data City = City {
-    _name :: String
-} deriving (Show)
 type BattleValue = Int
 data Player = Redosia | Bluegaria | Greenland | Shitloadnam deriving (Show, Eq, Ord)
-data Unit = Unit {
-    _BattleValue :: BattleValue,
-    _owner :: Player
-    } deriving (Show)
 type Timestamp = Int
 
 data GameState = GameState {
     _GameMap :: GameMap,
     _timestamp :: Timestamp
-    }
-
-instance Default GameState where
-    def = GameState initialMap 0
+}
 
 makeLenses ''MapField
 makeFields ''GameState

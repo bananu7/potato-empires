@@ -1,6 +1,10 @@
-module Potato.Serialization where
+{-# LANGUAGE OverloadedStrings #-}
+module Potato.Web.Serialization where
 import Data.Aeson.Types
 import Potato.Game
+import Potato.Web.Types
+import Data.Maybe
+import Data.HashMap.Strict (union)
 
 instance ToJSON InitialStatePacket where
     toJSON (InitialStatePacket fields units cities timestamp) = object [

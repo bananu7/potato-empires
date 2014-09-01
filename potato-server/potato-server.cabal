@@ -44,10 +44,10 @@ cabal-version:       >=1.8
 
 executable potato-server
   -- .hs or .lhs file containing the Main module.
-  main-is: potato/main.hs
+  main-is: main.hs
   
   -- Modules included in this executable, other than Main.
-  other-modules: Potato.Game, Potato.Serialization
+  other-modules: Potato.Game, Potato.Web.App, Potato.Web.Types, Potato.Web.Serialization
   
   -- Other library packages from which modules are imported.
   build-depends:       base==4.7.*, random-extras, aeson, scotty, lens > 4, mtl, wai-extra, text, data-default, stm, array, unordered-containers

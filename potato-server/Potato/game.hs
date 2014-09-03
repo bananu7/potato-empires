@@ -96,11 +96,16 @@ move :: Player -> Move -> GameState -> Maybe GameState
 move p m@(Move start end) g = if (isValid p g m) then Just applyMove else Nothing
                                where
                                 aUnit = (g ^. gameMap) ! start ^. unit
-                                changeMap = (ix end . unit .~ aUnit) . 
-                                            (ix start . unit .~ Nothing)
                                 applyMove = g & gameMap %~ changeMap
                                 				 & timestamp %~ (+1)
                                 				 & deductPlayerMove
+                                                 & checkCaptureCity
+                                                               
+                                checkCaptureCity = (gameMap . ix end . city . traverse . conqueror) `set` (Just p)
+ 
+                                changeMap = (ix end . unit .~ aUnit) . 
+                                            (ix start . unit .~ Nothing)
+
                                 deductPlayerMove = if g ^. currentPlayerMoves == 1 
                                 				 	then (currentPlayer %~ nextPlayer) . (currentPlayerMoves `set` defaultPlayerMoves)
                                 				 	else currentPlayerMoves %~ (subtract 1)

@@ -225,7 +225,10 @@ var initializePotato = function () {
     game.ctx = game.canvas.get(0).getContext('2d');
 
     // From then on just refresh units
-    setInterval(function () { updateUnits(game); }, config.updateInterval);
+    setInterval(function () { 
+        updateUnits(game);
+        updateCities(game);
+    }, config.updateInterval);
 
     // Also start drawing
     setInterval(function () { render(game); }, 30)
@@ -284,6 +287,12 @@ var handleClick = function (game, event) {
 var updateUnits = function (game) {
   $.get(config.serverUrl + '/units', function (data) {
     game.units = data.units;
+  });
+};
+
+var updateCities = function (game) {
+  $.get(config.serverUrl + '/cities', function (data) {
+    game.cities = data.cities;
   });
 };
 

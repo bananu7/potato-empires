@@ -31,7 +31,8 @@ instance Ix Point where
 data FieldType = Land | Water deriving (Show, Eq)
 
 data City = City {
-    _name :: String
+    _name :: String,
+    _conqueror :: Maybe Player
 } deriving (Show)
 
 data Unit = Unit {

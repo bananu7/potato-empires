@@ -38,7 +38,8 @@ instance ToJSON Player where
     toJSON = toJSON . show
 
 instance ToJSON City where
-    toJSON (City name) = object ["name" .= name]
+    toJSON (City name (Just conqueror)) = object ["name" .= name, "owner" .= conqueror]
+    toJSON (City name Nothing) = object ["name" .= name]
 
 instance ToJSON Unit where
     toJSON (Unit value owner) = object ["value" .= value, "owner" .= owner]

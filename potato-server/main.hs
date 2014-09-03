@@ -28,7 +28,7 @@ import Data.HashMap.Strict (union)
 main = startScotty 3000 app
 
 initialMap = emptyMap & (ix (Point 0 1).unit) `set` (Just $ Unit 12 Redosia)
-                      & (ix (Point 2 2).city) `set` (Just $ City "Cityville")
+                      & (ix (Point 2 2).city) `set` (Just $ City "Cityville" Nothing)
                       & (ix (Point 3 4).unit) `set` (Just $ Unit 10 Shitloadnam)
              where
                  emptyMap = array mapRange (map (,MapField Land Nothing Nothing) $ range mapRange)

@@ -82,8 +82,8 @@ isValid player game (Move start end) =
 
         maybeUnitAtStart = (gmap ! start) ^. unit
         isValidUnitAtStart = case maybeUnitAtStart of
-        	Just unit -> unit ^. owner == game ^. currentPlayer
-        	Nothing -> False
+            Just unit -> unit ^. owner == game ^. currentPlayer
+            Nothing -> False
 
         isValidDestination = (isNothing $ (gmap ! end) ^. unit) &&
                              ((== Land) $ (gmap ! end) ^. fieldType)
@@ -97,8 +97,8 @@ move p m@(Move start end) g = if (isValid p g m) then Just applyMove else Nothin
                                where
                                 aUnit = (g ^. gameMap) ! start ^. unit
                                 applyMove = g & gameMap %~ changeMap
-                                				 & timestamp %~ (+1)
-                                				 & deductPlayerMove
+                                                 & timestamp %~ (+1)
+                                                 & deductPlayerMove
                                                  & checkCaptureCity
                                                                
                                 checkCaptureCity = (gameMap . ix end . city . traverse . conqueror) `set` (Just p)
@@ -106,9 +106,9 @@ move p m@(Move start end) g = if (isValid p g m) then Just applyMove else Nothin
                                 changeMap = (ix end . unit .~ aUnit) . 
                                             (ix start . unit .~ Nothing)
 
-                                deductPlayerMove = if g ^. currentPlayerMoves == 1 
-                                				 	then (currentPlayer %~ nextPlayer) . (currentPlayerMoves `set` defaultPlayerMoves)
-                                				 	else currentPlayerMoves %~ (subtract 1)
+                                deductPlayerMove g = if g ^. currentPlayerMoves == 1 
+                                                      then g & (currentPlayer %~ nextPlayer) . (currentPlayerMoves `set` defaultPlayerMoves)
+                                                      else g & currentPlayerMoves %~ (subtract 1)
 
 
 nextPlayer :: Player -> Player

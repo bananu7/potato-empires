@@ -111,16 +111,15 @@ var renderEntities = function (game) {
 };
 
 var renderCity = function (game, city) {
-  renderTile(game, 'city', city.x, city.y);
   if (city.owner) {
     renderOwnerOverlay(game, city, city.owner);
   }
+  renderTile(game, 'city', city.x, city.y);
 };
 
 var renderUnit = function (game, unit) {
+  renderOwnerOverlay(game, unit, unit.owner);
   renderTile(game, 'unit', unit.x, unit.y);
-  // pick different image depending on player
-  // or tint
 };
 
 var renderInteractions = function (game) {

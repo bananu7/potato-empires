@@ -283,10 +283,15 @@ var handleClick = function (game, event) {
       // if any, mark as selected
       var unit = findUnitAt(game, game.mouse.x, game.mouse.y);
 
-      if (unit !== null) {
-        game.selectionState = 'UNIT';
-        game.selectedUnit = unit;
-      }
+      if (unit === null)
+          break;
+      
+      if (unit.owner !== game.currentPlayer)
+          break;
+      
+      game.selectionState = 'UNIT';
+      game.selectedUnit = unit;
+      
       break;
     case 'UNIT':
       // this is a move order
@@ -370,6 +375,11 @@ var findPossibleMoves = function (game, unit) {
       // Skip water
       if (game.board.tiles[y][x] === 'water') {
         continue;
+      }
+      
+      // A non-move is an invalid move
+      if (x === unit.x && y === unit.y) {
+          continue;
       }
 
       possibleMoves.push({ x: x, y : y});

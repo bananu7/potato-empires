@@ -254,13 +254,15 @@ var initializePotato = function () {
     .click(function (event) {
       handleClick(game);
     });
+      
+    game.statusDisplay = $('<div/>')
+      .appendTo('body');
     
     game.ctx = game.canvas.get(0).getContext('2d');
 
     // From then on just refresh units
     setInterval(function () { 
-        updateUnits(game);
-        updateCities(game);
+        updateGame(game);
     }, config.updateInterval);
 
     // Also start drawing
@@ -317,15 +319,18 @@ var handleClick = function (game, event) {
   }
 }
 
-var updateUnits = function (game) {
-  $.get(config.serverUrl + '/units', function (data) {
+var updateGame = function (game) {
+  $.get(config.serverUrl + '/update')
+  .done(function (data) {
     game.units = data.units;
-  });
-};
-
-var updateCities = function (game) {
-  $.get(config.serverUrl + '/cities', function (data) {
     game.cities = data.cities;
+    game.currentPlayer = data.currentPlayer;
+    game.movesLeft = data.movesLeft;
+      
+    game.statusDisplay.html(
+        "CurrentPlayer: " + game.currentPlayer + "<br>"
+       +"Moves left: " + game.movesLeft
+    );
   });
 };
 

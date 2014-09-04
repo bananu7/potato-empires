@@ -62,6 +62,10 @@ app = do
         game <- webM S.get
         json $ createInitialStatePacket game
 
+    get "/update" $ do
+        game <- webM S.get
+        json $ createUpdatePacket game
+
     post "/move" $ do
         MovePacket from to <- jsonData
         game <- webM S.get

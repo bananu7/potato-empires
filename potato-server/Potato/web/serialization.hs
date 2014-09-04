@@ -60,3 +60,13 @@ instance FromJSON MovePacket where
                       v .: "from" <*>
                       v .: "to"
     parseJSON _          = mzero
+
+instance ToJSON UpdatePacket where
+    toJSON (UpdatePacket units cities player movesLeft timestamp) =
+        object [
+            "units" .= combinePairs units,
+            "cities" .= combinePairs cities,
+            "currentPlayer" .= player,
+            "movesLeft" .= movesLeft,
+            "timestamp" .= timestamp
+        ]

@@ -112,6 +112,9 @@ var renderEntities = function (game) {
 
 var renderCity = function (game, city) {
   renderTile(game, 'city', city.x, city.y);
+  if (city.owner) {
+    renderOwnerOverlay(game, city, city.owner);
+  }
 };
 
 var renderUnit = function (game, unit) {
@@ -140,6 +143,37 @@ var renderUnitPicker = function (game) {
     game.board.tileSize
   );
   game.ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+  game.ctx.fill();
+};
+
+var renderOwnerOverlay = function (game, position, owner) {
+  var red = 'rgba(255, 0, 0, 0.5)';
+  var green = 'rgba(0, 255, 0, 0.5)';
+  var blue = 'rgba(0, 0, 255, 0.5)';
+  var violet = 'rgba(220, 0, 220, 0.5)';
+  var white = 'rgba(255, 255, 255, 0.5)';
+    
+  var color = white;
+    
+  if (owner === "Redosia") { color = red; }
+  else if (owner === "Greenland") { color = green; }
+  else if (owner === "Bluegaria") { color = blue; }
+  else if (owner === "Shitloadnam") { color = violet; }
+  
+  renderColorOverlay(game, position, color);
+}
+
+var renderColorOverlay = function (game, position, color) {
+  game.ctx.beginPath();
+  
+  game.ctx.rect(
+    position.x * game.board.tileSize,
+    position.y * game.board.tileSize,
+    game.board.tileSize,
+    game.board.tileSize
+  );
+
+  game.ctx.fillStyle = color;
   game.ctx.fill();
 };
 

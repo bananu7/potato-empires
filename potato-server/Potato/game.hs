@@ -97,9 +97,9 @@ move p m@(Move start end) g = if (isValid p g m) then Just applyMove else Nothin
                                where
                                 aUnit = (g ^. gameMap) ! start ^. unit
                                 applyMove = g & gameMap %~ changeMap
-                                                 & timestamp %~ (+1)
-                                                 & deductPlayerMove
-                                                 & checkCaptureCity
+                                              & timestamp %~ (+1)
+                                              & deductPlayerMove
+                                              & checkCaptureCity
                                                                
                                 checkCaptureCity = (gameMap . ix end . city . traverse . conqueror) `set` (Just p)
  

@@ -85,8 +85,7 @@ isValid player game (Move start end) =
             Just unit -> unit ^. owner == game ^. currentPlayer
             Nothing -> False
 
-        isValidDestination = (isNothing $ (gmap ! end) ^. unit) &&
-                             ((== Land) $ (gmap ! end) ^. fieldType)
+        isValidDestination = (== Land) $ (gmap ! end) ^. fieldType
 
         isNotTooFar = (manhattanDistance start end) <= 3
             where manhattanDistance (Point x1 y1) (Point x2 y2) = abs (x2-x1) + abs (y2-y1)
@@ -95,21 +94,37 @@ isValid player game (Move start end) =
 move :: Player -> Move -> GameState -> Maybe GameState
 move p m@(Move start end) g = if (isValid p g m) then Just applyMove else Nothing
                                where
-                                aUnit = (g ^. gameMap) ! start ^. unit
-                                applyMove = g & gameMap %~ changeMap
+                                applyMove = g & gameMap %~ changeDestination
+                                              & gameMap %~ changeStart
                                               & timestamp %~ (+1)
                                               & deductPlayerMove
                                               & checkCaptureCity
                                                                
                                 checkCaptureCity = (gameMap . ix end . city . traverse . conqueror) `set` (Just p)
  
-                                changeMap = (ix end . unit .~ aUnit) . 
-                                            (ix start . unit .~ Nothing)
+                                changeDestination gm = case maybeOtherUnit of
+                                    Nothing -> setDestinationUnit gm aUnit
+                                    Just (otherUnit) ->
+                                        if otherUnit ^. owner == p
+                                            then setDestinationUnit gm $ merge aUnit otherUnit
+                                            else setDestinationUnit gm $ battle aUnit otherUnit
+                                    where
+                                        aUnit = fromJust $ (gm ! start) ^. unit
+                                        maybeOtherUnit = (gm ! end) ^. unit
+                                        setDestinationUnit gm u = gm & ix end . unit .~ (Just u)
+                                        merge unitA unitB = unitA & battleValue +~ (unitB ^. battleValue)
+                                         
+                                changeStart = (ix start . unit .~ Nothing)
 
                                 deductPlayerMove g = if g ^. currentPlayerMoves == 1 
                                                       then g & (currentPlayer %~ nextPlayer) . (currentPlayerMoves `set` defaultPlayerMoves)
                                                       else g & currentPlayerMoves %~ (subtract 1)
 
+battle :: Unit -> Unit -> Unit
+battle unitA unitB =
+    if (unitA ^. battleValue >= unitB ^. battleValue)
+        then unitA & battleValue -~ (unitB ^. battleValue)
+        else unitB & battleValue -~ (unitA ^. battleValue)
 
 nextPlayer :: Player -> Player
 nextPlayer Shitloadnam = Redosia

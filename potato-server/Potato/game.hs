@@ -133,13 +133,13 @@ nextPlayer x = succ x
 getFieldElemList elem game = elems
     where 
         gmap = game ^. gameMap
-        pointsAndFields = (assocs gmap) ^.. traversed.(filtered (\(pos, field) -> isJust $ field ^. elem))
+        pointsAndFields = (assocs gmap) ^.. traverse.(filtered (\(pos, field) -> isJust $ field ^. elem))
         elems = map (\(point, field) -> (point, fromJust $ field ^. elem)) pointsAndFields
 
 getCitiesList = getFieldElemList city
 getUnitsList = getFieldElemList unit
 
-getFieldTypesList game = toListOfLists $ amap (view fieldType) gmap
+getFieldTypesList game = toListOfLists $ amap (^. fieldType) gmap
     where gmap = game ^. gameMap
           toListOfLists a = [ row y | y <- [minY .. maxY]]
            where

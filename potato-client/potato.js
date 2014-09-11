@@ -75,6 +75,24 @@ var renderTerrain = function (game) {
   }
 };
 
+var renderText = function (game, x, y, text) {
+  game.ctx.font = "30px Arial";
+  game.ctx.fillStyle = 'white';
+  game.ctx.fillText(text, x, y);
+  game.ctx.lineWidth = 1;
+  game.ctx.strokeStyle = "black";
+  game.ctx.strokeText(text, x, y);
+}
+
+var renderTextOnTile = function (game, x, y, text) {
+  renderText(
+    game,
+    x * game.board.tileSize + 2,
+    y * game.board.tileSize + game.board.tileSize - 2,
+    text
+  );
+}
+
 /**
  * Draw a tile of a given type at the given map coordinates
  */
@@ -120,6 +138,7 @@ var renderCity = function (game, city) {
 var renderUnit = function (game, unit) {
   renderOwnerOverlay(game, unit, unit.owner);
   renderTile(game, 'unit', unit.x, unit.y);
+  renderTextOnTile(game, unit.x, unit.y, unit.value);
 };
 
 var renderInteractions = function (game) {

@@ -92,33 +92,35 @@ isValid player game (Move start end) =
       
 -- |Returns Just new game state if the move is valid, nothing otherwise.
 move :: Player -> Move -> GameState -> Maybe GameState
-move p m@(Move start end) g = if (isValid p g m) then Just applyMove else Nothing
-                               where
-                                applyMove = g & gameMap %~ changeDestination
-                                              & gameMap %~ changeStart
-                                              & timestamp %~ (+1)
-                                              & deductPlayerMove
-                                              & checkCaptureCity
-                                                               
-                                checkCaptureCity = (gameMap . ix end . city . traverse . conqueror) `set` (Just p)
+move p m@(Move start end) g = if (isValid p g m) then Just $ applyMove p m g else Nothing
  
-                                changeDestination gm = case maybeOtherUnit of
-                                    Nothing -> setDestinationUnit gm aUnit
-                                    Just (otherUnit) ->
-                                        if otherUnit ^. owner == p
-                                            then setDestinationUnit gm $ merge aUnit otherUnit
-                                            else setDestinationUnit gm $ battle aUnit otherUnit
-                                    where
-                                        aUnit = fromJust $ (gm ! start) ^. unit
-                                        maybeOtherUnit = (gm ! end) ^. unit
-                                        setDestinationUnit gm u = gm & ix end . unit .~ (Just u)
-                                        merge unitA unitB = unitA & battleValue +~ (unitB ^. battleValue)
-                                         
-                                changeStart = (ix start . unit .~ Nothing)
+applyMove p m@(Move start end) g =
+                g
+                & gameMap %~ changeDestination
+                & gameMap %~ changeStart
+                & timestamp %~ (+1)
+                & deductPlayerMove
+                & checkCaptureCity
+ where
+    checkCaptureCity = (gameMap . ix end . city . traverse . conqueror) `set` (Just p)
 
-                                deductPlayerMove g = if g ^. currentPlayerMoves == 1 
-                                                      then g & (currentPlayer %~ nextPlayer) . (currentPlayerMoves `set` defaultPlayerMoves)
-                                                      else g & currentPlayerMoves %~ (subtract 1)
+    changeDestination gm = case maybeOtherUnit of
+        Nothing -> setDestinationUnit gm aUnit
+        Just (otherUnit) ->
+            if otherUnit ^. owner == p
+                then setDestinationUnit gm $ merge aUnit otherUnit
+                else setDestinationUnit gm $ battle aUnit otherUnit
+        where
+            aUnit = fromJust $ (gm ! start) ^. unit
+            maybeOtherUnit = (gm ! end) ^. unit
+            setDestinationUnit gm u = gm & ix end . unit .~ (Just u)
+            merge unitA unitB = unitA & battleValue +~ (unitB ^. battleValue)
+
+    changeStart = (ix start . unit .~ Nothing)
+
+    deductPlayerMove g = if g ^. currentPlayerMoves == 1
+                          then g & (currentPlayer %~ nextPlayer) . (currentPlayerMoves `set` defaultPlayerMoves)
+                          else g & currentPlayerMoves %~ (subtract 1)
 
 battle :: Unit -> Unit -> Unit
 battle unitA unitB =

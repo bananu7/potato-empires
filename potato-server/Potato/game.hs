@@ -17,7 +17,7 @@ import Data.Array
 import Data.Array.IArray (amap)
 import Data.Maybe
 import Data.HashMap.Strict (union)
-
+import Data.List
 
 data Point = Point Int Int deriving (Show, Eq, Ord)
 instance Ix Point where
@@ -56,10 +56,11 @@ data GameState = GameState {
     _GameMap :: GameMap,
     _CurrentPlayer :: Player,
     _timestamp :: Timestamp,
-    _currentPlayerMoves :: Int
+    _currentPlayerMoves :: Int,
+    _ActivePlayers :: [Player]
 }
 
-createGameState m = GameState m Redosia 0 defaultPlayerMoves
+createGameState m = GameState m Redosia 0 defaultPlayerMoves [Redosia, Shitloadnam]
 defaultPlayerMoves = 2
 
 makeLenses ''MapField
@@ -93,7 +94,8 @@ isValid player game (Move start end) =
 -- |Returns Just new game state if the move is valid, nothing otherwise.
 move :: Player -> Move -> GameState -> Maybe GameState
 move p m@(Move start end) g = if (isValid p g m) then Just $ applyMove p m g else Nothing
- 
+
+applyMove :: Player -> Move -> GameState -> GameState
 applyMove p m@(Move start end) g =
                 g
                 & gameMap %~ changeDestination
@@ -101,6 +103,7 @@ applyMove p m@(Move start end) g =
                 & timestamp %~ (+1)
                 & deductPlayerMove
                 & checkCaptureCity
+                & checkPlayersEndCondition
  where
     checkCaptureCity = (gameMap . ix end . city . traverse . conqueror) `set` (Just p)
 
@@ -119,8 +122,16 @@ applyMove p m@(Move start end) g =
     changeStart = (ix start . unit .~ Nothing)
 
     deductPlayerMove g = if g ^. currentPlayerMoves == 1
-                          then g & (currentPlayer %~ nextPlayer) . (currentPlayerMoves `set` defaultPlayerMoves)
+                          then g & (currentPlayer %~ nextPlayer g) . (currentPlayerMoves `set` defaultPlayerMoves)
                           else g & currentPlayerMoves %~ (subtract 1)
+
+    checkPlayersEndCondition = foldr1 (.) $ map checkPlayerEndCondition (g ^. activePlayers)
+    checkPlayerEndCondition p g = if hasNoCities p g then removePlayer p g else g
+     where
+        hasNoCities p g = isNothing $ g ^? gameMap . traverse . city . traverse . conqueror . traverse . filtered (== p)
+        removePlayer p g = g & activePlayers %~ delete p
+                             & (gameMap . traverse . filtered (hasUnitOfPlayer p)) %~ (unit `set` Nothing)
+        hasUnitOfPlayer p f = (f ^? unit . traverse . owner) == Just p
 
 battle :: Unit -> Unit -> Unit
 battle unitA unitB =
@@ -128,9 +139,11 @@ battle unitA unitB =
         then unitA & battleValue -~ (unitB ^. battleValue)
         else unitB & battleValue -~ (unitA ^. battleValue)
 
-nextPlayer :: Player -> Player
-nextPlayer Shitloadnam = Redosia
-nextPlayer x = succ x
+nextPlayer :: GameState -> Player -> Player
+nextPlayer g p = head . tail . dropWhile (/= p) . cycle $ (g ^. activePlayers)
+
+gameOver :: GameState -> Bool
+gameOver g = (g ^. currentPlayer) == nextPlayer g (g ^. currentPlayer)
                                 
 getFieldElemList elem game = elems
     where 

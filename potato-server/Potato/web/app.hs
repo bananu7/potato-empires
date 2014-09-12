@@ -37,8 +37,8 @@ executeWithCors method r action = method r $ do
 post = executeWithCors Scotty.post
 get = executeWithCors Scotty.get
 
-app :: ScottyT Text (WebM GameState) ()
-app = do
+app :: GameState -> ScottyT Text (WebM GameState) ()
+app defaultGameState = do
     middleware logStdoutDev
 
     get "/cities" $ do
@@ -72,7 +72,9 @@ app = do
         let result = move (game ^. currentPlayer) (Move from to) game
         case result of 
             Just newState -> do 
-                webM $ S.put newState
+                if (gameOver newState) 
+                    then webM $ S.put defaultGameState
+                    else webM $ S.put newState
                 json $ object []
             Nothing -> do
                 status $ status400

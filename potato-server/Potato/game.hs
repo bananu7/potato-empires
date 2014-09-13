@@ -104,6 +104,7 @@ applyMove p m@(Move start end) g =
                 & checkCaptureCity
                 & generateUnits
                 & deductPlayerMove
+                & forceEndTurn
                 & checkPlayersEndCondition
  where
     checkCaptureCity = (gameMap . ix end . city . traverse . conqueror) `set` (Just p)
@@ -122,10 +123,6 @@ applyMove p m@(Move start end) g =
 
     changeStart = (ix start . unit .~ Nothing)
 
-    deductPlayerMove g = if isPlayerLastMove g
-                          then g & (currentPlayer %~ nextPlayer g) . (currentPlayerMoves `set` defaultPlayerMoves)
-                          else g & currentPlayerMoves %~ (subtract 1)
-
     generateUnits g = if isPlayerLastMove g then g & gameMap . traverse %~ generateUnit
                                             else g
     generateUnit field = 
@@ -141,6 +138,14 @@ applyMove p m@(Move start end) g =
                     Just (Unit value p) -> field & unit .~ Just (Unit (value + 5) p)
                     Nothing -> field & unit .~ Just (Unit 5 p)
 
+    deductPlayerMove g = if isPlayerLastMove g
+                          then endTurn g
+                          else g & currentPlayerMoves %~ (subtract 1)
+
+    forceEndTurn g = if hasNoUnits p g then endTurn g else g
+     where
+      hasNoUnits p g = isNothing $ g ^? gameMap . traverse . unit . traverse . owner . filtered (== p)
+
     checkPlayersEndCondition = foldr1 (.) $ map checkPlayerEndCondition (g ^. activePlayers)
     checkPlayerEndCondition p g = if hasNoCities p g then removePlayer p g else g
      where
@@ -148,6 +153,9 @@ applyMove p m@(Move start end) g =
         removePlayer p g = g & activePlayers %~ delete p
                              & (gameMap . traverse . filtered (hasUnitOfPlayer p)) %~ (unit `set` Nothing)
         hasUnitOfPlayer p f = (f ^? unit . traverse . owner) == Just p
+
+endTurn :: GameState -> GameState
+endTurn g = g & (currentPlayer %~ nextPlayer g) . (currentPlayerMoves `set` defaultPlayerMoves)
 
 isPlayerLastMove :: GameState -> Bool 
 isPlayerLastMove g = (g ^. currentPlayerMoves) == 1

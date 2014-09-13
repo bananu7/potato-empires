@@ -5,8 +5,8 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 var config = {
-    serverUrl: "http://localhost:3000",
-    updateInterval: 1000
+    serverUrl: "",
+    updateInterval: 500
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -261,7 +261,8 @@ var initializePotato = function () {
   //game.board.tiles = makeTiles(game);
     
   // Load first frame
-  getInitialState(game).done(function (data) {
+  getInitialState(game)
+  .done(function (data) {
     game.canvas = $('<canvas/>').attr({
       width: game.board.width * game.board.tileSize,
       height: game.board.height * game.board.tileSize
@@ -272,6 +273,18 @@ var initializePotato = function () {
     })
     .click(function (event) {
       handleClick(game);
+    })
+    .bind('touchmove', function (event) {
+      event.preventDefault();
+      var touch = event.originalEvent.touches[0] || event.originalEvent.changedTouches[0];
+      var elm = $(this).offset();
+      var x = touch.pageX - elm.left;
+      var y = touch.pageY - elm.top;
+ 
+      event.pageX = x;
+      event.pageY = y;
+
+      updateMouse(game, event);
     });
       
     game.statusDisplay = $('<div/>')
@@ -286,6 +299,9 @@ var initializePotato = function () {
 
     // Also start drawing
     setInterval(function () { render(game); }, 30)
+  })
+  .fail(function(error) {
+      alert("Initial request failed");
   });
 };
 
@@ -359,7 +375,7 @@ var updateGame = function (game) {
 };
 
 var getInitialState = function(game) {
-  return $.getJSON(config.serverUrl, function (data) {
+  return $.getJSON(config.serverUrl + "/initial", function (data) {
     console.log(data);
     game.units = data.units;
     game.cities = data.cities;

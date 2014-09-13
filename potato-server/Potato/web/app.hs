@@ -26,7 +26,7 @@ import Data.Array.IArray (amap)
 import Data.Maybe
 import Data.Aeson (decode)
 import Network.HTTP.Types
-
+import Network.Wai.Middleware.Static
 
 setCorsHeader = setHeader "Access-Control-Allow-Origin" "*"
 
@@ -40,6 +40,7 @@ get = executeWithCors Scotty.get
 app :: GameState -> ScottyT Text (WebM GameState) ()
 app defaultGameState = do
     middleware logStdoutDev
+    middleware $ staticPolicy (addBase "../potato-client")
 
     get "/cities" $ do
         game <- webM S.get 
@@ -58,9 +59,12 @@ app defaultGameState = do
         webM $ gameMap %= (ix (Point 1 1) . unit .~ Just myNewUnit)
         redirect "/units"
     
-    get "/" $ do
+    get "/initial" $ do
         game <- webM S.get
         json $ createInitialStatePacket game
+
+    get "/" $ do
+        file "../potato-client/index.html"
 
     get "/update" $ do
         game <- webM S.get

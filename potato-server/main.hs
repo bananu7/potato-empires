@@ -1,46 +1,40 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
+
 module Main where 
-import Web.Scotty
-import Data.Aeson.Types
+import Potato.Game
+import Potato.Web.App
+import StatefulScotty
+import Web.Scotty.Trans hiding (get)
+import qualified Web.Scotty.Trans as Scotty (get)
+import Data.Aeson.Types hiding (Array)
+import Data.Default
+import Data.String
+import Data.Text.Lazy (Text)
+import Data.Text.Lazy.Encoding (decodeUtf8)
+import Network.Wai.Middleware.RequestLogger
+import qualified Control.Monad.State as S
+import Control.Lens hiding (index, (.=))
+import Data.Array
+import Data.Array.IArray (amap)
+import Data.Maybe
+import Data.HashMap.Strict (union)
 
-main = scotty 3000 $ do
-  get "/" $ do
-    json initialMap
+main = startScotty 3000 (app def)
 
-
-
-data Point = Point Int Int
-data MapField = Land | Water deriving (Show, Eq)
-type GameMap = [[MapField]]
-data City = City String Point
-type BattleValue = Int
-data Player = Redosia | Bluegaria | Greenland | Shitloadnam deriving (Show, Eq, Ord)
-data Unit = Unit BattleValue Player Point
-type Timestamp = Int
-
-data InitalStatePacket = InitalStatePacket GameMap [City] [Unit] Timestamp
-data UpdatePacket = UpdatePacket [Unit] Timestamp
-data MovePacket = MovePacket Point Point
-
-instance ToJSON InitalStatePacket where
-	toJSON (InitalStatePacket gameMap cities units timestamp) = object ["map" .= gameMap,
-			 "cities" .= cities,
-			 "units" .= units,
-			 "timestamp" .= timestamp]
-
-instance ToJSON MapField where
-	toJSON = toJSON . show
-
-instance ToJSON Player where
-	toJSON = toJSON . show
-
-instance ToJSON City where
-	toJSON (City name location) = object ["name" .= name, "location" .= location]
-
-instance ToJSON Unit where
-	toJSON (Unit value owner location) = object ["value" .= value, "location" .= location, "owner" .= owner]
-
-instance ToJSON Point where
- 	toJSON (Point x y) = object ["x" .= x, "y" .= y]
-
-initialMap = replicate 5 $ replicate 5 Land
+initialMap = emptyMap & (ix (Point 0 1).unit) `set` (Just $ Unit 12 Redosia)
+                      & (ix (Point 3 4).unit) `set` (Just $ Unit 10 Shitloadnam)
+                      & (ix (Point 1 1).city) `set` (Just $ City "Cityville" (Just Redosia))
+                      & (ix (Point 8 8).city) `set` (Just $ City "Townville" (Just Shitloadnam))
+                      & (ix (Point 4 5).city) `set` (Just $ City "Capturetown" Nothing)
+             where
+                 emptyMap = array mapRange (map (,MapField Land Nothing Nothing) $ range mapRange)
+                 mapRange = ((Point 0 0), (Point 9 9))
+               
+instance Default GameState where
+  def = createGameState initialMap

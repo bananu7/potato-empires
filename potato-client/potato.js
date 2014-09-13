@@ -1,6 +1,15 @@
 'use strict';
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// CONFIG
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+var config = {
+    serverUrl: "http://localhost:3000",
+    updateInterval: 1000
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // RESOURCE LOADING AND GENERATION
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -66,6 +75,24 @@ var renderTerrain = function (game) {
   }
 };
 
+var renderText = function (game, x, y, text) {
+  game.ctx.font = "30px Arial";
+  game.ctx.fillStyle = 'white';
+  game.ctx.fillText(text, x, y);
+  game.ctx.lineWidth = 1;
+  game.ctx.strokeStyle = "black";
+  game.ctx.strokeText(text, x, y);
+}
+
+var renderTextOnTile = function (game, x, y, text) {
+  renderText(
+    game,
+    x * game.board.tileSize + 2,
+    y * game.board.tileSize + game.board.tileSize - 2,
+    text
+  );
+}
+
 /**
  * Draw a tile of a given type at the given map coordinates
  */
@@ -102,13 +129,16 @@ var renderEntities = function (game) {
 };
 
 var renderCity = function (game, city) {
+  if (city.owner) {
+    renderOwnerOverlay(game, city, city.owner);
+  }
   renderTile(game, 'city', city.x, city.y);
 };
 
 var renderUnit = function (game, unit) {
+  renderOwnerOverlay(game, unit, unit.owner);
   renderTile(game, 'unit', unit.x, unit.y);
-  // pick different image depending on player
-  // or tint
+  renderTextOnTile(game, unit.x, unit.y, unit.value);
 };
 
 var renderInteractions = function (game) {
@@ -134,6 +164,37 @@ var renderUnitPicker = function (game) {
   game.ctx.fill();
 };
 
+var renderOwnerOverlay = function (game, position, owner) {
+  var red = 'rgba(255, 0, 0, 0.5)';
+  var green = 'rgba(0, 255, 0, 0.5)';
+  var blue = 'rgba(0, 0, 255, 0.5)';
+  var violet = 'rgba(220, 0, 220, 0.5)';
+  var white = 'rgba(255, 255, 255, 0.5)';
+    
+  var color = white;
+    
+  if (owner === "Redosia") { color = red; }
+  else if (owner === "Greenland") { color = green; }
+  else if (owner === "Bluegaria") { color = blue; }
+  else if (owner === "Shitloadnam") { color = violet; }
+  
+  renderColorOverlay(game, position, color);
+}
+
+var renderColorOverlay = function (game, position, color) {
+  game.ctx.beginPath();
+  
+  game.ctx.rect(
+    position.x * game.board.tileSize,
+    position.y * game.board.tileSize,
+    game.board.tileSize,
+    game.board.tileSize
+  );
+
+  game.ctx.fillStyle = color;
+  game.ctx.fill();
+};
+
 var renderSelectedUnit = function (game) {
   var unit = game.selectedUnit;
   // Render some kind of outline
@@ -152,31 +213,14 @@ var renderSelectedUnit = function (game) {
   // 3-block radius that is not water
   game.ctx.beginPath();
 
-  for (var y = unit.y - 1; y <= unit.y + 1; ++y) {
-    // Bounds check
-    if (y < 0 || y >= game.board.height) {
-      continue;
-    }
-
-    for (var x = unit.x - 1; x <= unit.x + 1; ++x) {
-      // Bounds check
-      if (x < 0 || x >= game.board.width) {
-        continue;
-      }
-
-      // Skip water
-      if (game.board.tiles[y][x] === 'water') {
-        continue;
-        
-      }
-      game.ctx.rect(
-        x * game.board.tileSize,
-        y * game.board.tileSize,
-        game.board.tileSize,
-        game.board.tileSize
-      );
-    }
-  }
+  findPossibleMoves(game, unit).forEach(function(point) {
+    game.ctx.rect(
+      point.x * game.board.tileSize,
+      point.y * game.board.tileSize,
+      game.board.tileSize,
+      game.board.tileSize
+    );
+  });
 
   game.ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
   game.ctx.fill();
@@ -198,49 +242,51 @@ var initializePotato = function () {
     },
 
     board: {
-      width: 20,
-      height: 20,
+      width: 1,
+      height: 1,
 
       tileSize: 40,
 
       tiles: []
     },
 
-    cities: [{x: 1, y: 1}],
-    units: [{x: 3, y: 3}],
+    cities: [],
+    units: [],
 
     selectionState: 'FREE',
     selectedUnit: null
   };
 
   game.images = loadImages('img');
-  game.board.tiles = makeTiles(game);
-
-  game.canvas = $('<canvas/>').attr({
-    width: game.board.width * game.board.tileSize,
-    height: game.board.height * game.board.tileSize
-  })
-  .appendTo('body')
-  .mousemove(function (event) {
-    updateMouse(game, event);
-  })
-  .click(function (event) {
-    handleClick(game);
-  });
-
-  game.ctx = game.canvas.get(0).getContext('2d');
-
+  //game.board.tiles = makeTiles(game);
+    
   // Load first frame
-  //$.get('/first', function (data) {
-  //  game.board.tiles = data.map;
-  //  game.cities = data.cities;
+  getInitialState(game).done(function (data) {
+    game.canvas = $('<canvas/>').attr({
+      width: game.board.width * game.board.tileSize,
+      height: game.board.height * game.board.tileSize
+    })
+    .appendTo('body')
+    .mousemove(function (event) {
+      updateMouse(game, event);
+    })
+    .click(function (event) {
+      handleClick(game);
+    });
+      
+    game.statusDisplay = $('<div/>')
+      .appendTo('body');
+    
+    game.ctx = game.canvas.get(0).getContext('2d');
 
     // From then on just refresh units
-    //setInterval(function () { updateUnits(game); }, 1000);
+    setInterval(function () { 
+        updateGame(game);
+    }, config.updateInterval);
 
     // Also start drawing
     setInterval(function () { render(game); }, 30)
-  //});
+  });
 };
 
 var updateMouse = function (game, event) {
@@ -256,22 +302,70 @@ var handleClick = function (game, event) {
       // if any, mark as selected
       var unit = findUnitAt(game, game.mouse.x, game.mouse.y);
 
-      if (unit !== null) {
-        game.selectionState = 'UNIT';
-        game.selectedUnit = unit;
-      }
+      if (unit === null)
+          break;
+      
+      if (unit.owner !== game.currentPlayer)
+          break;
+      
+      game.selectionState = 'UNIT';
+      game.selectedUnit = unit;
+      
       break;
     case 'UNIT':
       // this is a move order
       // issue move order to server (modulo checks?)
       // can also update interaction renders
+        
+      var deselectUnit = function(game) { 
+          game.selectionState = 'FREE';
+          game.selectedUnit = null;
+      };
+      var possibleMoves = findPossibleMoves(game, game.selectedUnit);
+      
+      var compareByXY = function(a,b) { return a.x === b.x && a.y === b.y; };
+      var isEqualToMouse = function(p) { return compareByXY(p, game.mouse); };
+        
+      if (possibleMoves.filter(isEqualToMouse).length === 0) {
+          deselectUnit(game);
+          break;
+      }
+      
+      var moveData = {
+          from: { x: game.selectedUnit.x, y: game.selectedUnit.y },
+          to: { x: game.mouse.x, y: game.mouse.y }
+      };
+
+      $.post(config.serverUrl + '/move', JSON.stringify(moveData));
+        
+      deselectUnit(game);
       break;
   }
 }
 
-var updateUnits = function (game) {
-  $.get('/units', function (data) {
-    game.units = units;
+var updateGame = function (game) {
+  $.get(config.serverUrl + '/update')
+  .done(function (data) {
+    game.units = data.units;
+    game.cities = data.cities;
+    game.currentPlayer = data.currentPlayer;
+    game.movesLeft = data.movesLeft;
+      
+    game.statusDisplay.html(
+        "CurrentPlayer: " + game.currentPlayer + "<br>"
+       +"Moves left: " + game.movesLeft
+    );
+  });
+};
+
+var getInitialState = function(game) {
+  return $.getJSON(config.serverUrl, function (data) {
+    console.log(data);
+    game.units = data.units;
+    game.cities = data.cities;
+    game.board.width = data.map[0].length;
+    game.board.height = data.map.length;
+    game.board.tiles = data.map;
   });
 };
 
@@ -282,3 +376,34 @@ var findUnitAt = function (game, x, y) {
 
   return result.length === 0 ? null : result[0];
 };
+
+var findPossibleMoves = function (game, unit) {
+  var possibleMoves = [];
+  for (var y = unit.y - 1; y <= unit.y + 1; ++y) {
+    // Bounds check
+    if (y < 0 || y >= game.board.height) {
+      continue;
+    }
+
+    for (var x = unit.x - 1; x <= unit.x + 1; ++x) {
+      // Bounds check
+      if (x < 0 || x >= game.board.width) {
+        continue;
+      }
+
+      // Skip water
+      if (game.board.tiles[y][x] === 'water') {
+        continue;
+      }
+      
+      // A non-move is an invalid move
+      if (x === unit.x && y === unit.y) {
+          continue;
+      }
+
+      possibleMoves.push({ x: x, y : y});
+    }
+  }
+  return possibleMoves;
+}
+

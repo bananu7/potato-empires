@@ -101,8 +101,9 @@ applyMove p m@(Move start end) g =
                 & gameMap %~ changeDestination
                 & gameMap %~ changeStart
                 & timestamp %~ (+1)
-                & deductPlayerMove
                 & checkCaptureCity
+                & generateUnits
+                & deductPlayerMove
                 & checkPlayersEndCondition
  where
     checkCaptureCity = (gameMap . ix end . city . traverse . conqueror) `set` (Just p)
@@ -121,9 +122,24 @@ applyMove p m@(Move start end) g =
 
     changeStart = (ix start . unit .~ Nothing)
 
-    deductPlayerMove g = if g ^. currentPlayerMoves == 1
+    deductPlayerMove g = if isPlayerLastMove g
                           then g & (currentPlayer %~ nextPlayer g) . (currentPlayerMoves `set` defaultPlayerMoves)
                           else g & currentPlayerMoves %~ (subtract 1)
+
+    generateUnits g = if isPlayerLastMove g then g & gameMap . traverse %~ generateUnit
+                                            else g
+    generateUnit field = 
+        case getConqueror field of
+            Just c -> generateUnit' c field
+            Nothing -> field
+        where
+            getConqueror field = field ^? city . traverse . conqueror . traverse
+
+            generateUnit' :: Player -> MapField -> MapField
+            generateUnit' p field =
+                case field ^. unit of
+                    Just (Unit value p) -> field & unit .~ Just (Unit (value + 5) p)
+                    Nothing -> field & unit .~ Just (Unit 5 p)
 
     checkPlayersEndCondition = foldr1 (.) $ map checkPlayerEndCondition (g ^. activePlayers)
     checkPlayerEndCondition p g = if hasNoCities p g then removePlayer p g else g
@@ -132,6 +148,9 @@ applyMove p m@(Move start end) g =
         removePlayer p g = g & activePlayers %~ delete p
                              & (gameMap . traverse . filtered (hasUnitOfPlayer p)) %~ (unit `set` Nothing)
         hasUnitOfPlayer p f = (f ^? unit . traverse . owner) == Just p
+
+isPlayerLastMove :: GameState -> Bool 
+isPlayerLastMove g = (g ^. currentPlayerMoves) == 1
 
 battle :: Unit -> Unit -> Unit
 battle unitA unitB =

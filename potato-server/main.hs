@@ -24,8 +24,19 @@ import Data.Array
 import Data.Array.IArray (amap)
 import Data.Maybe
 import Data.HashMap.Strict (union)
+import System.Environment
+import System.IO.Error
+import Control.Exception
 
-main = startScotty 3000 (app def)
+main = do
+	port <- getEnvFallback "PORT" "3000"
+	startScotty (read port) (app def)
+	where
+		getEnvFallback :: String -> String -> IO String
+		getEnvFallback n f = handleJust extractNotFound (const $ return f) $ getEnv n
+		extractNotFound e 
+			| isDoesNotExistError e = Just ()
+			| otherwise = Nothing
 
 initialMap = emptyMap & (ix (Point 0 1).unit) `set` (Just $ Unit 12 Redosia)
                       & (ix (Point 3 4).unit) `set` (Just $ Unit 10 Shitloadnam)

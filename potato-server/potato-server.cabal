@@ -55,5 +55,6 @@ executable potato-server
   build-depends:       base==4.7.*, random-extras, aeson, scotty, lens > 4,
                        mtl, wai-extra, text, data-default, stm, array, unordered-containers,
                        http-types,
-                       wai-middleware-static
+                       wai-middleware-static,
+                       logfloat < 0.11.1
   

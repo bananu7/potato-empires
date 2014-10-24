@@ -162,9 +162,13 @@ isPlayerLastMove g = (g ^. currentPlayerMoves) == 1
 
 battle :: Unit -> Unit -> Unit
 battle unitA unitB =
-    if (unitA ^. battleValue >= unitB ^. battleValue)
-        then unitA & battleValue -~ (unitB ^. battleValue)
-        else unitB & battleValue -~ (unitA ^. battleValue)
+    let newUnit = if (unitA ^. battleValue >= unitB ^. battleValue)
+                    then unitA & battleValue -~ (unitB ^. battleValue)
+                    else unitB & battleValue -~ (unitA ^. battleValue)
+    in
+       if newUnit ^. battleValue == 0
+           then newUnit & (battleValue `set` 1)
+           else newUnit          
 
 nextPlayer :: GameState -> Player -> Player
 nextPlayer g p = head . tail . dropWhile (/= p) . cycle $ (g ^. activePlayers)

@@ -56,4 +56,16 @@ executable potato-server
                        mtl, wai-extra, text, data-default, stm, array, unordered-containers,
                        http-types,
                        wai-middleware-static
-  
+
+test-suite Test
+  ghc-options: -Wall
+  default-extensions:  OverloadedStrings
+  type: exitcode-stdio-1.0
+  main-is: Test/Test.hs
+  build-depends:       base == 4.7.*,
+                       hspec >= 1.8,
+                       lens > 4,
+                       mtl, data-default, text, array, unordered-containers
+
+  default-language:    Haskell2010
+

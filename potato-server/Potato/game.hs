@@ -33,18 +33,18 @@ data FieldType = Land | Water deriving (Show, Eq)
 data City = City {
     _name :: String,
     _conqueror :: Maybe Player
-} deriving (Show)
+} deriving (Show, Eq)
 
 data Unit = Unit {
     _BattleValue :: BattleValue,
     _owner :: Player
-} deriving (Show)
+} deriving (Show, Eq)
 
 data MapField = MapField { 
     _FieldType :: FieldType,
     _city :: Maybe City,
     _unit :: Maybe Unit
-}
+} deriving (Eq)
 
 type GameMap = Array Point MapField
 

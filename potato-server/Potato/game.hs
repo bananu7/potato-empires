@@ -12,7 +12,7 @@ import Data.String
 import Data.Text.Lazy (Text)
 import Data.Text.Lazy.Encoding (decodeUtf8)
 import qualified Control.Monad.State as S
-import Control.Lens hiding (index, (.=))
+import Control.Lens hiding (index)
 import Data.Array
 import Data.Array.IArray (amap)
 import Data.Maybe
@@ -60,6 +60,8 @@ data GameState = GameState {
     _ActivePlayers :: [Player]
 }
 
+data MoveResult = InvalidMove | GameOver | GameContinues deriving (Eq, Show)
+
 createGameState m = GameState m Redosia 0 defaultPlayerMoves [Redosia, Shitloadnam]
 defaultPlayerMoves = 2
 
@@ -72,6 +74,8 @@ makeLenses ''City
 makeLenses ''Unit
 
 data Move = Move Point Point deriving (Show, Eq)
+
+type GameMonad a = S.State GameState a
 
 isValid :: Player -> GameState -> Move -> Bool
 isValid player game (Move start end) =
@@ -92,22 +96,32 @@ isValid player game (Move start end) =
             where manhattanDistance (Point x1 y1) (Point x2 y2) = abs (x2-x1) + abs (y2-y1)
       
 -- |Returns Just new game state if the move is valid, nothing otherwise.
-move :: Player -> Move -> GameState -> Maybe GameState
-move p m@(Move start end) g = if (isValid p g m) then Just $ applyMove p m g else Nothing
+--move :: Player -> Move -> GameState -> Maybe GameState
+move :: Player -> Move -> GameMonad MoveResult
+move p m@(Move start end) = S.get >>= \g -> 
+    if (isValid p g m)
+    then do
+        applyMove p m
+        if gameOver g then
+            return GameOver
+        else
+            return GameContinues
+    else return InvalidMove
 
-applyMove :: Player -> Move -> GameState -> GameState
-applyMove p m@(Move start end) g =
-                g
-                & gameMap %~ changeDestination
-                & gameMap %~ changeStart
-                & timestamp %~ (+1)
-                & checkCaptureCity
-                & generateUnits
-                & deductPlayerMove
-                & forceEndTurn
-                & checkPlayersEndCondition
+
+applyMove :: Player -> Move -> GameMonad () 
+--applyMove :: Player -> Move -> GameState -> GameState
+applyMove p m@(Move start end) = do
+    gameMap %= changeDestination
+    changeStart
+    timestamp %= (+1)
+    checkCaptureCity
+    generateUnits
+    deductPlayerMove
+    forceEndTurn
+    checkPlayersEndCondition
  where
-    checkCaptureCity = (gameMap . ix end . city . traverse . conqueror) `set` (Just p)
+    checkCaptureCity = (gameMap . ix end . city . traverse . conqueror) .= (Just p)
 
     changeDestination gm = case maybeOtherUnit of
         Nothing -> setDestinationUnit gm aUnit
@@ -121,10 +135,10 @@ applyMove p m@(Move start end) g =
             setDestinationUnit gm u = gm & ix end . unit .~ (Just u)
             merge unitA unitB = unitA & battleValue +~ (unitB ^. battleValue)
 
-    changeStart = (ix start . unit .~ Nothing)
+    changeStart = (gameMap . ix start . unit .= Nothing)
 
-    generateUnits g = if isPlayerLastMove g then g & gameMap . traverse %~ generateUnit
-                                            else g
+    generateUnits = S.get >>= \game -> if isPlayerLastMove game then gameMap . traverse %= generateUnit
+                                                              else return ()
     generateUnit field = 
         case getConqueror field of
             Just c -> generateUnit' c field
@@ -138,24 +152,30 @@ applyMove p m@(Move start end) g =
                     Just (Unit value p) -> field & unit .~ Just (Unit (value + 5) p)
                     Nothing -> field & unit .~ Just (Unit 5 p)
 
-    deductPlayerMove g = if isPlayerLastMove g
-                          then endTurn g
-                          else g & currentPlayerMoves %~ (subtract 1)
+    deductPlayerMove = S.get >>= \g -> if isPlayerLastMove g
+                          then endTurn
+                          else currentPlayerMoves %= (subtract 1)
 
-    forceEndTurn g = if hasNoUnits p g then endTurn g else g
+    forceEndTurn = S.get >>= \g -> if hasNoUnits p g then endTurn else return ()
      where
       hasNoUnits p g = isNothing $ g ^? gameMap . traverse . unit . traverse . owner . filtered (== p)
 
-    checkPlayersEndCondition = foldr1 (.) $ map checkPlayerEndCondition (g ^. activePlayers)
-    checkPlayerEndCondition p g = if hasNoCities p g then removePlayer p g else g
+    checkPlayersEndCondition :: GameMonad ()
+    checkPlayersEndCondition = S.get >>= \g -> mapM_ checkPlayerEndCondition (g ^. activePlayers)
+    checkPlayerEndCondition p = S.get >>= \g -> if hasNoCities p g then removePlayer p else return ()
      where
         hasNoCities p g = isNothing $ g ^? gameMap . traverse . city . traverse . conqueror . traverse . filtered (== p)
-        removePlayer p g = g & activePlayers %~ delete p
-                             & (gameMap . traverse . filtered (hasUnitOfPlayer p)) %~ (unit `set` Nothing)
+
+        removePlayer p = do
+            activePlayers %= delete p
+            (gameMap . traverse . filtered (hasUnitOfPlayer p)) %= (unit `set` Nothing)
+
         hasUnitOfPlayer p f = (f ^? unit . traverse . owner) == Just p
 
-endTurn :: GameState -> GameState
-endTurn g = g & (currentPlayer %~ nextPlayer g) . (currentPlayerMoves `set` defaultPlayerMoves)
+endTurn :: GameMonad ()
+endTurn = do
+    S.get >>= \g -> currentPlayer %= nextPlayer g
+    currentPlayerMoves .= defaultPlayerMoves
 
 isPlayerLastMove :: GameState -> Bool 
 isPlayerLastMove g = (g ^. currentPlayerMoves) == 1

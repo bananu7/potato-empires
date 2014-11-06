@@ -37,6 +37,16 @@ executeWithCors method r action = method r $ do
 post = executeWithCors Scotty.post
 get = executeWithCors Scotty.get
 
+--hoistState :: Monad m => S.State s a -> S.StateT s m a
+--hoistState = S.StateT . (return .) . S.runState
+
+hoistState :: (Monad m, S.MonadState s m) => S.State s a -> m a
+hoistState op = do
+    x <- S.get
+    let (r, x') = S.runState op x
+    S.put x'
+    return r
+
 app :: GameState -> ScottyT Text (WebM GameState) ()
 app defaultGameState = do
     middleware logStdoutDev
@@ -72,14 +82,15 @@ app defaultGameState = do
 
     post "/move" $ do
         MovePacket from to <- jsonData
-        game <- webM S.get
-        let result = move (game ^. currentPlayer) (Move from to) game
-        case result of 
-            Just newState -> do 
-                if (gameOver newState) 
-                    then webM $ S.put defaultGameState
-                    else webM $ S.put newState
+        moveResult <- webM $ hoistState $ do
+            currentPlayer <- fmap (view currentPlayer) S.get
+            move currentPlayer (Move from to)
+                
+        case moveResult of
+            GameOver -> do
+                webM $ S.put defaultGameState
                 json $ object []
-            Nothing -> do
-                status $ status400
+            GameContinues -> json $ object []
+            InvalidMove -> do
+                status status400
                 text "Invalid move"

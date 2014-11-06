@@ -11,7 +11,7 @@ import Data.Default
 import Data.String
 import Data.Text.Lazy (Text)
 import Data.Text.Lazy.Encoding (decodeUtf8)
-import qualified Control.Monad.State as S
+import Control.Monad.State
 import Control.Lens hiding (index)
 import Data.Array
 import Data.Array.IArray (amap)
@@ -75,7 +75,7 @@ makeLenses ''Unit
 
 data Move = Move Point Point deriving (Show, Eq)
 
-type GameMonad a = S.State GameState a
+type GameMonad a = State GameState a
 
 isValid :: Player -> GameState -> Move -> Bool
 isValid player game (Move start end) =
@@ -98,11 +98,11 @@ isValid player game (Move start end) =
 -- |Returns Just new game state if the move is valid, nothing otherwise.
 --move :: Player -> Move -> GameState -> Maybe GameState
 move :: Player -> Move -> GameMonad MoveResult
-move p m@(Move start end) = S.get >>= \g -> 
+move p m@(Move start end) = get >>= \g -> 
     if (isValid p g m)
     then do
         applyMove p m
-        S.get >>= \g -> if gameOver g then
+        get >>= \g -> if gameOver g then
             return GameOver
         else
             return GameContinues
@@ -137,7 +137,7 @@ applyMove p m@(Move start end) = do
 
     changeStart = (gameMap . ix start . unit .= Nothing)
 
-    generateUnits = S.get >>= \game -> if isPlayerLastMove game then gameMap . traverse %= generateUnit
+    generateUnits = get >>= \game -> if isPlayerLastMove game then gameMap . traverse %= generateUnit
                                                               else return ()
     generateUnit field = 
         case getConqueror field of
@@ -152,17 +152,17 @@ applyMove p m@(Move start end) = do
                     Just (Unit value p) -> field & unit .~ Just (Unit (value + 5) p)
                     Nothing -> field & unit .~ Just (Unit 5 p)
 
-    deductPlayerMove = S.get >>= \g -> if isPlayerLastMove g
+    deductPlayerMove = get >>= \g -> if isPlayerLastMove g
                           then endTurn
                           else currentPlayerMoves %= (subtract 1)
 
-    forceEndTurn = S.get >>= \g -> if hasNoUnits p g then endTurn else return ()
+    forceEndTurn = get >>= \g -> if hasNoUnits p g then endTurn else return ()
      where
       hasNoUnits p g = isNothing $ g ^? gameMap . traverse . unit . traverse . owner . filtered (== p)
 
     checkPlayersEndCondition :: GameMonad ()
-    checkPlayersEndCondition = S.get >>= \g -> mapM_ checkPlayerEndCondition (g ^. activePlayers)
-    checkPlayerEndCondition p = S.get >>= \g -> if hasNoCities p g then removePlayer p else return ()
+    checkPlayersEndCondition = get >>= \g -> mapM_ checkPlayerEndCondition (g ^. activePlayers)
+    checkPlayerEndCondition p = get >>= \g -> if hasNoCities p g then removePlayer p else return ()
      where
         hasNoCities p g = isNothing $ g ^? gameMap . traverse . city . traverse . conqueror . traverse . filtered (== p)
 
@@ -174,7 +174,7 @@ applyMove p m@(Move start end) = do
 
 endTurn :: GameMonad ()
 endTurn = do
-    S.get >>= \g -> currentPlayer %= nextPlayer g
+    get >>= \g -> currentPlayer %= nextPlayer g
     currentPlayerMoves .= defaultPlayerMoves
 
 isPlayerLastMove :: GameState -> Bool 

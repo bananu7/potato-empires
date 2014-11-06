@@ -102,7 +102,7 @@ move p m@(Move start end) = S.get >>= \g ->
     if (isValid p g m)
     then do
         applyMove p m
-        if gameOver g then
+        S.get >>= \g -> if gameOver g then
             return GameOver
         else
             return GameContinues
@@ -211,3 +211,8 @@ getFieldTypesList game = toListOfLists $ amap (^. fieldType) gmap
            where
               row y = [ a ! (Point x y) | x <- [minX .. maxX]]
               ((Point minX minY), (Point maxX maxY)) = bounds a
+
+emptyMap :: GameMap
+emptyMap = array mapRange (map (,MapField Land Nothing Nothing) $ range mapRange)
+            where
+                 mapRange = ((Point 0 0), (Point 9 9))

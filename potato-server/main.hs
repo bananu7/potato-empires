@@ -12,6 +12,9 @@ import Potato.Web.App
 import StatefulScotty
 import Data.Default
 import Control.Lens hiding (index, (.=))
+import Control.Exception (handleJust)
+import System.Environment (getEnv)
+import System.IO.Error (isDoesNotExistError)
 
 main = do
     port <- getEnvFallback "PORT" "3000"

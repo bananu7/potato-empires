@@ -76,10 +76,12 @@ type GameMonad a = State GameState a
 
 isValid :: Player -> GameState -> Move -> Bool
 isValid player game (Move start end) =
-    and [isNotOutOfBounds, isValidUnitAtStart, isValidDestination, isNotTooFar]
+    and [isCurrentPlayer, isNotOutOfBounds, isValidUnitAtStart, isValidDestination, isNotTooFar]
     where
         gmap = game ^. gameMap
         
+        isCurrentPlayer = player == game ^. currentPlayer
+
         isNotOutOfBounds = inRange (bounds gmap) start && inRange (bounds gmap) end
 
         maybeUnitAtStart = (gmap ! start) ^. unit

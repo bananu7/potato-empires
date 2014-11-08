@@ -136,7 +136,9 @@ var renderCity = function (game, city) {
 };
 
 var renderUnit = function (game, unit) {
-  renderOwnerOverlay(game, unit, unit.owner);
+  if (findCityAt(game, unit.x, unit.y) === null) {
+    renderOwnerOverlay(game, unit, unit.owner);
+  }
   renderTile(game, 'unit', unit.x, unit.y);
   renderTextOnTile(game, unit.x, unit.y, unit.value);
 };
@@ -388,6 +390,14 @@ var getInitialState = function(game) {
 var findUnitAt = function (game, x, y) {
   var result = $.grep(game.units, function (unit) {
     return unit.x === x && unit.y === y;
+  });
+
+  return result.length === 0 ? null : result[0];
+};
+
+var findCityAt = function (game, x, y) {
+  var result = $.grep(game.cities, function (city) {
+    return city.x === x && city.y === y;
   });
 
   return result.length === 0 ? null : result[0];

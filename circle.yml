@@ -1,0 +1,7 @@
+machine:
+  ghc:
+    version: 7.8.3
+general:
+  artifacts:
+    - "dist/build/potato-server/potato-server" # main executable
+  build_dir: potato-server

@@ -47,10 +47,10 @@ hoistState op = do
     S.put x'
     return r
 
-app :: GameState -> ScottyT Text (WebM GameState) ()
-app defaultGameState = do
+app :: String -> GameState -> ScottyT Text (WebM GameState) ()
+app clientDir defaultGameState = do
     middleware logStdoutDev
-    middleware $ staticPolicy (addBase "../potato-client")
+    middleware $ staticPolicy (addBase clientDir)
 
     get "/cities" $ do
         game <- webM S.get 
@@ -74,7 +74,7 @@ app defaultGameState = do
         json $ createInitialStatePacket game
 
     get "/" $ do
-        file "../potato-client/index.html"
+        file $ clientDir ++ "/index.html"
 
     get "/update" $ do
         game <- webM S.get

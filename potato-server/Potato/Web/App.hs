@@ -14,17 +14,10 @@ import StatefulScotty
 import Web.Scotty.Trans hiding (get, post)
 import qualified Web.Scotty.Trans as Scotty (get, post)
 import Data.Aeson.Types hiding (Array)
-import Data.Default
-import Data.String
 import Data.Text.Lazy (Text)
-import Data.Text.Lazy.Encoding (decodeUtf8)
 import Network.Wai.Middleware.RequestLogger
 import qualified Control.Monad.State as S
 import Control.Lens hiding (index, (.=))
-import Data.Array
-import Data.Array.IArray (amap)
-import Data.Maybe
-import Data.Aeson (decode)
 import Network.HTTP.Types
 import Network.Wai.Middleware.Static
 

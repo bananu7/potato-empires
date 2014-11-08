@@ -7,16 +7,11 @@
 {-# LANGUAGE FlexibleInstances #-}
 module Potato.Game where 
 
-import Data.Default
-import Data.String
-import Data.Text.Lazy (Text)
-import Data.Text.Lazy.Encoding (decodeUtf8)
 import Control.Monad.State
 import Control.Lens hiding (index)
 import Data.Array
 import Data.Array.IArray (amap)
 import Data.Maybe
-import Data.HashMap.Strict (union)
 import Data.List
 
 data Point = Point Int Int deriving (Show, Eq, Ord)
@@ -62,7 +57,9 @@ data GameState = GameState {
 
 data MoveResult = InvalidMove | GameOver | GameContinues deriving (Eq, Show)
 
+createGameState :: GameMap -> GameState
 createGameState m = GameState m Redosia 0 defaultPlayerMoves [Redosia, Shitloadnam]
+defaultPlayerMoves :: Int
 defaultPlayerMoves = 2
 
 makeLenses ''MapField
@@ -98,7 +95,7 @@ isValid player game (Move start end) =
 -- |Returns Just new game state if the move is valid, nothing otherwise.
 --move :: Player -> Move -> GameState -> Maybe GameState
 move :: Player -> Move -> GameMonad MoveResult
-move p m@(Move start end) = get >>= \g -> 
+move p m = get >>= \g -> 
     if (isValid p g m)
     then do
         applyMove p m
@@ -111,7 +108,7 @@ move p m@(Move start end) = get >>= \g ->
 
 applyMove :: Player -> Move -> GameMonad () 
 --applyMove :: Player -> Move -> GameState -> GameState
-applyMove p m@(Move start end) = do
+applyMove p (Move start end) = do
     gameMap %= changeDestination
     changeStart
     timestamp %= (+1)
@@ -199,12 +196,16 @@ gameOver g = (g ^. currentPlayer) == nextPlayer g (g ^. currentPlayer)
 getFieldElemList elem game = elems
     where 
         gmap = game ^. gameMap
-        pointsAndFields = (assocs gmap) ^.. traverse.(filtered (\(pos, field) -> isJust $ field ^. elem))
+        pointsAndFields = (assocs gmap) ^.. traverse.(filtered (\(_, field) -> isJust $ field ^. elem))
         elems = map (\(point, field) -> (point, fromJust $ field ^. elem)) pointsAndFields
 
+getCitiesList :: GameState -> [(Point, City)]
 getCitiesList = getFieldElemList city
+
+getUnitsList :: GameState -> [(Point, Unit)]
 getUnitsList = getFieldElemList unit
 
+getFieldTypesList :: GameState -> [[FieldType]]
 getFieldTypesList game = toListOfLists $ amap (^. fieldType) gmap
     where gmap = game ^. gameMap
           toListOfLists a = [ row y | y <- [minY .. maxY]]

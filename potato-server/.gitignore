@@ -1,6 +1,10 @@
 # Haskell build folder
 dist/
 
+# Cabal sandbox files
+cabal.sandbox.config
+.cabal-sandbox
+
 # Haskell binaries
 *.hi
 *.o

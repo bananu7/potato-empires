@@ -41,12 +41,17 @@ build-type:          Simple
 -- Constraint on the version of Cabal needed to build this package.
 cabal-version:       >=1.18
 
+source-repository head
+  type:              git
+  location:          https://github.com/bananu7/potato-empires.git
+
 
 executable potato-server
   -- .hs or .lhs file containing the Main module.
   main-is: main.hs
   
   default-language: Haskell2010
+  ghc-options: -ferror-spans
 
   -- Modules included in this executable, other than Main.
   other-modules: Potato.Game, Potato.Web.App, Potato.Web.Types, Potato.Web.Serialization
@@ -59,7 +64,7 @@ executable potato-server
                        logfloat < 0.11.1
 
 test-suite Test
-  ghc-options: -Wall
+  ghc-options: -Wall -ferror-spans
   default-extensions:  OverloadedStrings
   type: exitcode-stdio-1.0
   main-is: Test/Test.hs

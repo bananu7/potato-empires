@@ -16,11 +16,11 @@ import Data.List
 
 data Point = Point Int Int deriving (Show, Eq, Ord)
 instance Ix Point where
-    range ((Point minX minY), (Point maxX maxY)) = [(Point x y) | x <- [minX .. maxX], y <- [minY .. maxY]] 
-    inRange ((Point minX minY), (Point maxX maxY)) (Point x y) = and [x >= minX, y >= minY, x <= maxX, y <= maxY] 
+    range (Point minX minY, Point maxX maxY) = [Point x y | x <- [minX .. maxX], y <- [minY .. maxY]] 
+    inRange (Point minX minY, Point maxX maxY) (Point x y) = and [x >= minX, y >= minY, x <= maxX, y <= maxY] 
    
     -- implemented the same as default (a,b) Ix instance
-    index r@((Point l1 l2), (Point u1 u2)) p@(Point i1 i2) | inRange r p = index (l1,u1) i1 * rangeSize (l2,u2) + index (l2,u2) i2 
+    index r@(Point l1 l2, Point u1 u2) p@(Point i1 i2) | inRange r p = index (l1,u1) i1 * rangeSize (l2,u2) + index (l2,u2) i2 
                                                            | otherwise = error "Out of range"
 
 data FieldType = Land | Water deriving (Show, Eq)
@@ -122,7 +122,7 @@ applyMove p (Move start end) = do
 
     changeDestination gm = case maybeOtherUnit of
         Nothing -> setDestinationUnit gm aUnit
-        Just (otherUnit) ->
+        Just otherUnit ->
             if otherUnit ^. owner == p
                 then setDestinationUnit gm $ merge aUnit otherUnit
                 else setDestinationUnit gm $ battle aUnit otherUnit
@@ -134,8 +134,8 @@ applyMove p (Move start end) = do
 
     changeStart = (gameMap . ix start . unit .= Nothing)
 
-    generateUnits = get >>= \game -> if isPlayerLastMove game then gameMap . traverse %= generateUnit
-                                                              else return ()
+    generateUnits = get >>= \game -> when (isPlayerLastMove game) $ gameMap . traverse %= generateUnit
+
     generateUnit field = 
         case getConqueror field of
             Just c -> generateUnit' c field
@@ -151,15 +151,15 @@ applyMove p (Move start end) = do
 
     deductPlayerMove = get >>= \g -> if isPlayerLastMove g
                           then endTurn
-                          else currentPlayerMoves %= (subtract 1)
+                          else currentPlayerMoves %= subtract 1
 
-    forceEndTurn = get >>= \g -> if hasNoUnits p g then endTurn else return ()
+    forceEndTurn = get >>= \g -> when (hasNoUnits p g) endTurn
      where
       hasNoUnits p g = isNothing $ g ^? gameMap . traverse . unit . traverse . owner . filtered (== p)
 
     checkPlayersEndCondition :: GameMonad ()
     checkPlayersEndCondition = get >>= \g -> mapM_ checkPlayerEndCondition (g ^. activePlayers)
-    checkPlayerEndCondition p = get >>= \g -> if hasNoCities p g then removePlayer p else return ()
+    checkPlayerEndCondition p = get >>= \g -> when (hasNoCities p g) $ removePlayer p
      where
         hasNoCities p g = isNothing $ g ^? gameMap . traverse . city . traverse . conqueror . traverse . filtered (== p)
 
@@ -210,10 +210,10 @@ getFieldTypesList game = toListOfLists $ amap (^. fieldType) gmap
     where gmap = game ^. gameMap
           toListOfLists a = [ row y | y <- [minY .. maxY]]
            where
-              row y = [ a ! (Point x y) | x <- [minX .. maxX]]
-              ((Point minX minY), (Point maxX maxY)) = bounds a
+              row y = [ a ! Point x y | x <- [minX .. maxX]]
+              (Point minX minY, Point maxX maxY) = bounds a
 
 emptyMap :: GameMap
 emptyMap = array mapRange (map (,MapField Land Nothing Nothing) $ range mapRange)
             where
-                 mapRange = ((Point 0 0), (Point 9 9))
+                 mapRange = (Point 0 0, Point 9 9)

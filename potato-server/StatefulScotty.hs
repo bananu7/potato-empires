@@ -48,7 +48,7 @@ webM :: MonadTrans t => WebM appState a -> t (WebM appState) a
 webM = lift
 
 instance MonadState s (WebM s) where
-    get = ask >>= liftIO . readTVarIO >>= return
+    get = ask >>= liftIO . readTVarIO
     put x = ask >>= liftIO . atomically . flip writeTVar x
 
 -- Some helpers to make this feel more like a state monad.

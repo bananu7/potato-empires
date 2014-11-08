@@ -1,7 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -14,7 +12,7 @@ import Data.Default
 import Control.Lens hiding (index, (.=))
 import Control.Exception (handleJust)
 import System.Environment (getEnv)
-import System.IO.Error (isDoesNotExistError)
+import System.IO.Error (isDoesNotExistError )
 
 main = do
     port <- getEnvFallback "PORT" "3000"

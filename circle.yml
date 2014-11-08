@@ -5,3 +5,8 @@ general:
   artifacts:
     - "dist/build/potato-server/potato-server" # main executable
   build_dir: potato-server
+deployment:
+  staging:
+    branch: master
+    heroku:
+      appname: squareshit

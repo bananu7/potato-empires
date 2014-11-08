@@ -22,10 +22,8 @@ instance ToJSON InitialStatePacket where
 instance Show MapField where
     show (MapField f u c) = fs ++ us ++ cs
         where fs = show f
-              us = if isJust u then show (fromJust u)
-                               else ""
-              cs = if isJust c then show (fromJust c)
-                               else ""
+              us = maybe "" show u
+              cs = maybe "" show c
 
 instance ToJSON MapField where
     toJSON = toJSON . show

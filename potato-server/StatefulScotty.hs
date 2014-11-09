@@ -15,6 +15,7 @@ module StatefulScotty(
     , gets
     , modify
     , startScotty
+    , runWebMState
 ) where
 
 import Control.Concurrent.STM
@@ -26,6 +27,7 @@ import Data.Default
 
 import Web.Scotty.Trans
 import Control.Monad.State.Class
+import Control.Monad.State
 
 import Control.Applicative
 -- Why 'ReaderT (TVar AppState)' rather than 'StateT AppState'?
@@ -57,6 +59,15 @@ instance MonadState s (WebM s) where
 
 --modify :: (appState -> appState) -> WebM appState ()
 --modify f = ask >>= liftIO . atomically . flip modifyTVar' f
+
+runWebMState :: State appState a -> WebM appState a
+runWebMState f = do
+    appStateTVar <- ask
+    liftIO . atomically $ do
+        appState <- readTVar appStateTVar
+        let (fResult, appState') = runState f appState
+        writeTVar appStateTVar appState'
+        return fResult
 
 startScotty port app = do 
     sync <- newTVarIO def  

@@ -73,7 +73,8 @@ app clientDir defaultGameState = do
 
     post "/move" $ do
         MovePacket from to <- jsonData
-        moveResult <- webM $ hoistState $ do
+        --moveResult <- webM $ hoistState $ do
+        moveResult <- webM . runWebMState $ do
             currentPlayer <- fmap (view currentPlayer) S.get
             move currentPlayer (Move from to)
                 

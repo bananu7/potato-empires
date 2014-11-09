@@ -112,16 +112,27 @@ move p m@(Move start end) = get >>= \g ->
 applyMove :: Player -> Move -> GameMonad () 
 --applyMove :: Player -> Move -> GameState -> GameState
 applyMove p m@(Move start end) = do
+    checkCaptureCity
     gameMap %= changeDestination
     changeStart
     timestamp %= (+1)
-    checkCaptureCity
     generateUnits
     deductPlayerMove
     forceEndTurn
     checkPlayersEndCondition
  where
-    checkCaptureCity = (gameMap . ix end . city . traverse . conqueror) .= (Just p)
+    checkCaptureCity = do 
+        game <- get
+        let getMaybeUnitAt point = game ^? gameMap . ix point . unit . traverse
+            maybeOtherUnit = getMaybeUnitAt end
+            aUnit = fromJust $ getMaybeUnitAt start
+            capture = (gameMap . ix end . city . traverse . conqueror) .= (Just p)
+        case maybeOtherUnit of
+            Nothing -> capture
+            Just otherUnit ->
+                if (battle aUnit otherUnit) ^. owner == p
+                    then capture
+                    else return ()
 
     changeDestination gm = case maybeOtherUnit of
         Nothing -> setDestinationUnit gm aUnit

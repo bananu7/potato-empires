@@ -18,8 +18,10 @@ import System.Random
 main = do
     port <- getEnvFallback "PORT" "3000"
     clientDir <- getEnvFallback "POTATO_CLIENT_DIR" "../potato-client"
+    generator <- getStdGen
     putStrLn $ "Starting mighty Potato on port " ++ port ++ " with client in '" ++ clientDir ++ "'"
-    startScotty (read port) (app clientDir def)
+    let initialState = createGameState initialMap generator
+    startScotty (read port) (app clientDir initialState) initialState
     where
         getEnvFallback :: String -> String -> IO String
         getEnvFallback n f = handleJust extractNotFound (const $ return f) $ getEnv n
@@ -33,5 +35,3 @@ initialMap = emptyMap & (ix (Point 0 1).unit) `set` (Just $ Unit 12 Redosia)
                       & (ix (Point 8 8).city) `set` (Just $ City "Townville" (Just Shitloadnam))
                       & (ix (Point 4 5).city) `set` (Just $ City "Capturetown" Nothing)
                                 
-instance Default GameState where
-  def = createGameState initialMap (mkStdGen 1)

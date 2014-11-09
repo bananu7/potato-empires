@@ -58,8 +58,8 @@ instance MonadState s (WebM s) where
 --modify :: (appState -> appState) -> WebM appState ()
 --modify f = ask >>= liftIO . atomically . flip modifyTVar' f
 
-startScotty port app = do 
-    sync <- newTVarIO def  
+startScotty port app initialState = do 
+    sync <- newTVarIO initialState
     let runM m = runReaderT (runWebM m) sync
         runActionToIO = runM
     scottyT port runM runActionToIO app

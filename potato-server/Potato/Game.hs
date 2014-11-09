@@ -120,7 +120,6 @@ hoist c = do
 execRandom = hoist . state
 
 applyMove :: Player -> Move -> GameMonad () 
---applyMove :: Player -> Move -> GameState -> GameState
 applyMove p (Move start end) = do
     gameMap %= changeDestination
     changeStart

@@ -1,3 +1,6 @@
+{-# ANN module "HLint: ignore Redundant do" #-}
+{-# ANN module "HLint: ignore Redundant bracket" #-}
+
 module Main where
 import Test.Hspec
 
@@ -56,7 +59,7 @@ spec = do
                 in (evalState act initialState) `shouldBe` InvalidMove
 
         it "should reject move if there's no unit on 'from' field" $ do
-            let initialState = createGameState $ emptyMap
+            let initialState = createGameState emptyMap
                 act = move Redosia $ Move (Point 0 0) (Point 1 0)
                 in (evalState act initialState) `shouldBe` InvalidMove
 

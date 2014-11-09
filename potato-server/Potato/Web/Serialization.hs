@@ -10,7 +10,7 @@ import Control.Monad
 
 unionObjects (Object a) (Object b) = a `union` b
 combinePairs :: (ToJSON a, ToJSON b) => [(a,b)] -> [Object]
-combinePairs = map (\(a,b) -> (toJSON a) `unionObjects` (toJSON b))
+combinePairs = map (\(a,b) -> toJSON a `unionObjects` toJSON b)
 
 instance ToJSON InitialStatePacket where
     toJSON (InitialStatePacket fields units cities timestamp) = object [

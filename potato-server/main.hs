@@ -13,6 +13,7 @@ import Control.Lens hiding (index, (.=))
 import Control.Exception (handleJust)
 import System.Environment (getEnv)
 import System.IO.Error (isDoesNotExistError )
+import System.Random
 
 main = do
     port <- getEnvFallback "PORT" "3000"
@@ -33,4 +34,4 @@ initialMap = emptyMap & (ix (Point 0 1).unit) `set` (Just $ Unit 12 Redosia)
                       & (ix (Point 4 5).city) `set` (Just $ City "Capturetown" Nothing)
                                 
 instance Default GameState where
-  def = createGameState initialMap
+  def = createGameState initialMap (mkStdGen 1)

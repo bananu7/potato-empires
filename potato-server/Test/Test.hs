@@ -4,6 +4,9 @@ import Test.Hspec
 import Potato.Game
 import Control.Lens hiding (index)
 import Control.Monad.State
+import System.Random
+
+createTestGameState m = createGameState m (mkStdGen 1)
 
 spec :: Spec
 spec = do
@@ -14,7 +17,7 @@ spec = do
             battle (Unit 10 Redosia) (Unit 10 Shitloadnam) `shouldBe` (Unit 1 Redosia)
      
     describe "game over: " $ do
-        let initialState = createGameState $ emptyMap
+        let initialState = createTestGameState $ emptyMap
                               & (ix (Point 0 0).unit) `set` (Just $ Unit 12 Redosia)
                               & (ix (Point 0 0).city) `set` (Just $ City "Red city" (Just Redosia))
                               & (ix (Point 1 0).city) `set` (Just $ City "Shit city" (Just Shitloadnam))
@@ -26,25 +29,25 @@ spec = do
 
     describe "move validation: " $ do
         it "should reject move outside of map's boundaries" $ do
-            let initialState = createGameState $ emptyMap
+            let initialState = createTestGameState $ emptyMap
                                   & (ix (Point 0 0).unit) `set` (Just $ Unit 12 Redosia)
                 act = move Redosia $ Move (Point 0 0) (Point (negate 1) 0)
                 in (evalState act initialState) `shouldBe` InvalidMove
 
         it "should reject move of other player's unit" $ do
-            let initialState = createGameState $ emptyMap
+            let initialState = createTestGameState $ emptyMap
                                   & (ix (Point 0 0).unit) `set` (Just $ Unit 12 Shitloadnam)
                 act = move Redosia $ Move (Point 0 0) (Point 1 0)
                 in (evalState act initialState) `shouldBe` InvalidMove
 
         it "should reject move if it's other player's turn" $ do
-            let initialState = createGameState $ emptyMap
+            let initialState = createTestGameState $ emptyMap
                                   & (ix (Point 0 0).unit) `set` (Just $ Unit 12 Shitloadnam)
                 act = move Shitloadnam $ Move (Point 0 0) (Point 1 0)
                 in (evalState act initialState) `shouldBe` InvalidMove
 
         it "should reject move if there's no unit on 'from' field" $ do
-            let initialState = createGameState $ emptyMap
+            let initialState = createTestGameState $ emptyMap
                 act = move Redosia $ Move (Point 0 0) (Point 1 0)
                 in (evalState act initialState) `shouldBe` InvalidMove
 

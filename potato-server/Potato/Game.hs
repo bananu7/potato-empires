@@ -5,6 +5,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Potato.Game where 
 
 import Control.Monad.State
@@ -13,6 +14,7 @@ import Data.Array
 import Data.Array.IArray (amap)
 import Data.Maybe
 import Data.List
+import System.Random
 
 data Point = Point Int Int deriving (Show, Eq, Ord)
 instance Ix Point where
@@ -52,12 +54,13 @@ data GameState = GameState {
     _CurrentPlayer :: Player,
     _timestamp :: Timestamp,
     _currentPlayerMoves :: Int,
-    _ActivePlayers :: [Player]
+    _ActivePlayers :: [Player],
+    _gen :: StdGen
 }
 
 data MoveResult = InvalidMove | GameOver | GameContinues deriving (Eq, Show)
 
-createGameState :: GameMap -> GameState
+createGameState :: GameMap -> StdGen -> GameState
 createGameState m = GameState m Redosia 0 defaultPlayerMoves [Redosia, Shitloadnam]
 defaultPlayerMoves :: Int
 defaultPlayerMoves = 2
@@ -72,7 +75,7 @@ makeLenses ''Unit
 
 data Move = Move Point Point deriving (Show, Eq)
 
-type GameMonad a = State GameState a
+type GameMonad = State GameState
 
 isValid :: Player -> GameState -> Move -> Bool
 isValid player game (Move start end) =
@@ -107,6 +110,14 @@ move p m = get >>= \g ->
             return GameContinues
     else return InvalidMove
 
+hoist c = do
+    gs <- get
+    let g = _gen gs
+    (res, g') <- lift $ runStateT c g
+    put (gs {_gen = g'})
+    return res
+
+execRandom = hoist . state
 
 applyMove :: Player -> Move -> GameMonad () 
 --applyMove :: Player -> Move -> GameState -> GameState
@@ -119,7 +130,13 @@ applyMove p (Move start end) = do
     deductPlayerMove
     forceEndTurn
     checkPlayersEndCondition
+    addRandomUnit
  where
+    addRandomUnit :: GameMonad ()
+    addRandomUnit = do
+        value <- execRandom $ randomR (1,100)
+        (gameMap . ix (Point 0 0) . unit) .= (Just $ Unit value Redosia)
+
     checkCaptureCity = (gameMap . ix end . city . traverse . conqueror) .= (Just p)
 
     changeDestination gm = case maybeOtherUnit of

@@ -37,6 +37,17 @@ spec = do
         it "final move's result should be game over" $ do
             (evalState act initialState)  `shouldBe` GameOver
 
+    describe "game over in turn ending move: " $ do
+        let initialState = createGameState $ emptyMap
+                              & (ix (Point 0 0).unit) `set` (Just $ Unit 12 Redosia)
+                              & (ix (Point 0 0).city) `set` (Just $ City "Red city" (Just Redosia))
+                              & (ix (Point 1 0).city) `set` (Just $ City "Shit city" (Just Shitloadnam))
+            act = do 
+                move Redosia $ Move (Point 0 0) (Point 1 1)
+                move Redosia $ Move (Point 1 1) (Point 1 0)
+        it "final move's result should be game over" $ do
+            (evalState act initialState)  `shouldBe` GameOver
+
     describe "move validation: " $ do
         it "should reject move outside of map's boundaries" $ do
             let initialState = createGameState $ emptyMap

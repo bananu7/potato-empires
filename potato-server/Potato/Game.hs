@@ -95,7 +95,6 @@ isValid player game (Move start end) =
             where manhattanDistance (Point x1 y1) (Point x2 y2) = abs (x2-x1) + abs (y2-y1)
       
 -- |Returns Just new game state if the move is valid, nothing otherwise.
---move :: Player -> Move -> GameState -> Maybe GameState
 move :: Player -> Move -> GameMonad MoveResult
 move p m = get >>= \g -> 
     if (isValid p g m)
@@ -109,18 +108,26 @@ move p m = get >>= \g ->
 
 
 applyMove :: Player -> Move -> GameMonad () 
---applyMove :: Player -> Move -> GameState -> GameState
 applyMove p (Move start end) = do
+    checkCaptureCity
     gameMap %= changeDestination
     changeStart
     timestamp %= (+1)
-    checkCaptureCity
     generateUnits
     deductPlayerMove
     forceEndTurn
     checkPlayersEndCondition
  where
-    checkCaptureCity = (gameMap . ix end . city . traverse . conqueror) .= (Just p)
+    checkCaptureCity = do 
+        game <- get
+        let getMaybeUnitAt point = game ^? gameMap . ix point . unit . traverse
+            maybeOtherUnit = getMaybeUnitAt end
+            aUnit = fromJust $ getMaybeUnitAt start
+            capture = (gameMap . ix end . city . traverse . conqueror) .= (Just p)
+        case maybeOtherUnit of
+            Nothing -> capture
+            Just otherUnit ->
+                when ((battle aUnit otherUnit) ^. owner == p) capture
 
     changeDestination gm = case maybeOtherUnit of
         Nothing -> setDestinationUnit gm aUnit

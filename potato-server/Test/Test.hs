@@ -5,6 +5,9 @@ import Potato.Game
 import Control.Lens hiding (index)
 import Control.Monad.State
 
+{-# ANN module ("HLint: ignore Redundant do" :: String) #-}
+{-# ANN module ("HLint: ignore Redundant bracket" :: String) #-}
+
 spec :: Spec
 spec = do
     describe "battle" $ do

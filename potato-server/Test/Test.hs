@@ -10,13 +10,13 @@ import Control.Monad.State
 
 spec :: Spec
 spec = do
-    describe "battle" $ do
+    describe "battle: " $ do
         it "subtracts units' battleValues and picks the greater" $ do
             battle (Unit 10 Redosia) (Unit 5 Shitloadnam) `shouldBe` (Unit 5 Redosia)
         it "properly acts when forces are equal, preferring attacker" $ do
             battle (Unit 10 Redosia) (Unit 10 Shitloadnam) `shouldBe` (Unit 1 Redosia)
 
-    describe "conquering cities" $ do
+    describe "conquering cities: " $ do
         it "lost battle should not change city ownership" $ do
             let initialState = createGameState $ emptyMap
                               & (ix (Point 0 0).unit) `set` (Just $ Unit 12 Shitloadnam)
@@ -36,6 +36,17 @@ spec = do
             act = move Redosia $ Move (Point 0 0) (Point 1 0)
         it "after final move victor should be the current player" $ do
             (execState act initialState) ^. currentPlayer `shouldBe` Redosia
+        it "final move's result should be game over" $ do
+            (evalState act initialState)  `shouldBe` GameOver
+
+    describe "game over in turn ending move: " $ do
+        let initialState = createGameState $ emptyMap
+                              & (ix (Point 0 0).unit) `set` (Just $ Unit 12 Redosia)
+                              & (ix (Point 0 0).city) `set` (Just $ City "Red city" (Just Redosia))
+                              & (ix (Point 1 0).city) `set` (Just $ City "Shit city" (Just Shitloadnam))
+            act = do 
+                move Redosia $ Move (Point 0 0) (Point 1 1)
+                move Redosia $ Move (Point 1 1) (Point 1 0)
         it "final move's result should be game over" $ do
             (evalState act initialState)  `shouldBe` GameOver
 

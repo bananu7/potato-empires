@@ -114,9 +114,9 @@ applyMove p (Move start end) = do
     changeStart
     timestamp %= (+1)
     generateUnits
-    deductPlayerMove
-    forceEndTurn
     checkPlayersEndCondition
+    forceEndTurn
+    deductPlayerMove
  where
     checkCaptureCity = do 
         game <- get

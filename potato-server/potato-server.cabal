@@ -45,7 +45,6 @@ source-repository head
   type:              git
   location:          https://github.com/bananu7/potato-empires.git
 
-
 executable potato-server
   -- .hs or .lhs file containing the Main module.
   main-is: main.hs

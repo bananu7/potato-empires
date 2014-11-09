@@ -3,14 +3,13 @@ module Potato.Web.Serialization where
 import Data.Aeson.Types
 import Potato.Game
 import Potato.Web.Types
-import Data.Maybe
 import Data.HashMap.Strict (union)
 import Control.Applicative
 import Control.Monad
 
 unionObjects (Object a) (Object b) = a `union` b
 combinePairs :: (ToJSON a, ToJSON b) => [(a,b)] -> [Object]
-combinePairs = map (\(a,b) -> (toJSON a) `unionObjects` (toJSON b))
+combinePairs = map (\(a,b) -> toJSON a `unionObjects` toJSON b)
 
 instance ToJSON InitialStatePacket where
     toJSON (InitialStatePacket fields units cities timestamp) = object [

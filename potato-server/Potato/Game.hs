@@ -197,8 +197,11 @@ battle unitA unitB =
            else newUnit          
 
 nextPlayer :: GameState -> Player -> Player
-nextPlayer g p = head . tail . dropWhile (/= p) . cycle $ (g ^. activePlayers)
-
+nextPlayer g p = 
+    let actPlayers = g ^. activePlayers 
+    in if length actPlayers == 1 then head actPlayers
+        else head . tail . dropWhile (/= p) . cycle $ actPlayers
+        
 gameOver :: GameState -> Bool
 gameOver g = (g ^. currentPlayer) == nextPlayer g (g ^. currentPlayer)
                                 

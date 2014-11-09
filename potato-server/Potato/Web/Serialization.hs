@@ -3,7 +3,6 @@ module Potato.Web.Serialization where
 import Data.Aeson.Types
 import Potato.Game
 import Potato.Web.Types
-import Data.Maybe
 import Data.HashMap.Strict (union)
 import Control.Applicative
 import Control.Monad

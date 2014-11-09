@@ -1,6 +1,3 @@
-{-# ANN module "HLint: ignore Redundant do" #-}
-{-# ANN module "HLint: ignore Redundant bracket" #-}
-
 module Main where
 import Test.Hspec
 

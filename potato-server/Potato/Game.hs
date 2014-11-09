@@ -130,9 +130,7 @@ applyMove p m@(Move start end) = do
         case maybeOtherUnit of
             Nothing -> capture
             Just otherUnit ->
-                if (battle aUnit otherUnit) ^. owner == p
-                    then capture
-                    else return ()
+                when ((battle aUnit otherUnit) ^. owner == p) capture
 
     changeDestination gm = case maybeOtherUnit of
         Nothing -> setDestinationUnit gm aUnit

@@ -19,8 +19,7 @@ spec = do
                               & (ix (Point 0 0).unit) `set` (Just $ Unit 12 Shitloadnam)
                               & (ix (Point 0 0).city) `set` (Just $ City "Red city" (Just Shitloadnam))
                               & (ix (Point 1 0).unit) `set` (Just $ Unit 10 Redosia)
-                              -- 2nd city is needed to prevent game over with result with hang, see issue #32
-                              & (ix (Point 2 0).city) `set` (Just $ City "Red city2" (Just Shitloadnam)) 
+
                 act = move Redosia $ Move (Point 1 0) (Point 0 0)
             (execState act initialState) ^? (gameMap . ix (Point 0 0). city . traverse . conqueror . traverse) `shouldBe` (Just Shitloadnam)
 

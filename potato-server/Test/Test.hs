@@ -10,13 +10,13 @@ import Control.Monad.State
 
 spec :: Spec
 spec = do
-    describe "battle" $ do
+    describe "battle: " $ do
         it "subtracts units' battleValues and picks the greater" $ do
             battle (Unit 10 Redosia) (Unit 5 Shitloadnam) `shouldBe` (Unit 5 Redosia)
         it "properly acts when forces are equal, preferring attacker" $ do
             battle (Unit 10 Redosia) (Unit 10 Shitloadnam) `shouldBe` (Unit 1 Redosia)
 
-    describe "conquering cities" $ do
+    describe "conquering cities: " $ do
         it "lost battle should not change city ownership" $ do
             let initialState = createGameState $ emptyMap
                               & (ix (Point 0 0).unit) `set` (Just $ Unit 12 Shitloadnam)

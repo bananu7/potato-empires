@@ -50,17 +50,25 @@ newtype WebM appState a = WebM { runWebM :: ReaderT (TVar appState) IO a }
 webM :: MonadTrans t => WebM appState a -> t (WebM appState) a
 webM = lift
 
--- This instance is not disabled, because using it can lead to
--- consistency problems,
---instance MonadState s (WebM s) where
---   get = ask >>= liftIO . readTVarIO
---    put x = ask >>= liftIO . atomically . flip writeTVar x
-
-getWebMState_ :: WebM appState appState
-getWebMState_ = ask >>= liftIO . readTVarIO
-
 getWebMState :: MonadTrans t => t (WebM appState) appState
-getWebMState = webM getWebMState_
+getWebMState = 
+    let
+        getWebMState_ :: WebM appState appState
+        getWebMState_ = ask >>= liftIO . readTVarIO
+    in webM getWebMState_ 
+
+runWebMState :: MonadTrans t => State appState a -> t (WebM appState) a
+runWebMState x = 
+    let 
+        runWebMState_ :: State appState a -> WebM appState a
+        runWebMState_ f = do
+            appStateTVar <- ask
+            liftIO . atomically $ do
+                appState <- readTVar appStateTVar
+                let (fResult, appState') = runState f appState
+                writeTVar appStateTVar appState'
+                return fResult
+    in webM $ runWebMState_ x
 
 -- Some helpers to make this feel more like a state monad.
 --gets :: (appState -> b) -> WebM appState b
@@ -68,18 +76,6 @@ getWebMState = webM getWebMState_
 
 --modify :: (appState -> appState) -> WebM appState ()
 --modify f = ask >>= liftIO . atomically . flip modifyTVar' f
-
-runWebMState_ :: State appState a -> WebM appState a
-runWebMState_ f = do
-    appStateTVar <- ask
-    liftIO . atomically $ do
-        appState <- readTVar appStateTVar
-        let (fResult, appState') = runState f appState
-        writeTVar appStateTVar appState'
-        return fResult
-
-runWebMState :: MonadTrans t => State appState a -> t (WebM appState) a
-runWebMState x = webM $ runWebMState_ x
 
 startScotty port app = do 
     sync <- newTVarIO def  

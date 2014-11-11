@@ -28,15 +28,7 @@ executeWithCors method r action = method r $ do
 post = executeWithCors Scotty.post
 get = executeWithCors Scotty.get
 
---hoistState :: Monad m => S.State s a -> S.StateT s m a
---hoistState = S.StateT . (return .) . S.runState
-
-hoistState :: (Monad m, S.MonadState s m) => S.State s a -> m a
-hoistState op = do
-    x <- S.get
-    let (r, x') = S.runState op x
-    S.put x'
-    return r
+emptyJsonResponse = json $ object []
 
 app :: String -> GameState -> ScottyT Text (WebM GameState) ()
 app clientDir defaultGameState = do
@@ -44,45 +36,44 @@ app clientDir defaultGameState = do
     middleware $ staticPolicy (addBase clientDir)
 
     get "/cities" $ do
-        game <- webM S.get 
+        game <- webM getWebMState
         json $ object ["cities" .= (combinePairs $ getCitiesList game)]
 
     get "/units" $ do 
-        game <- webM S.get
+        game <- webM getWebMState
         json $ object ["units" .= (combinePairs $ getUnitsList game)]
 
     get "/map" $ do
-        game <- webM S.get
+        game <- webM getWebMState
         json $ getFieldTypesList game
 
     get "/units/add" $ do
         let myNewUnit = (Unit 99 Redosia)
-        webM $ gameMap %= (ix (Point 1 1) . unit .~ Just myNewUnit)
+        webM . runWebMState $ gameMap %= (ix (Point 1 1) . unit .~ Just myNewUnit)
         redirect "/units"
     
     get "/initial" $ do
-        game <- webM S.get
+        game <- webM getWebMState
         json $ createInitialStatePacket game
 
     get "/" $ do
         file $ clientDir ++ "/index.html"
 
     get "/update" $ do
-        game <- webM S.get
+        game <- webM getWebMState
         json $ createUpdatePacket game
 
     post "/move" $ do
         MovePacket from to <- jsonData
-        --moveResult <- webM $ hoistState $ do
         moveResult <- webM . runWebMState $ do
             currentPlayer <- fmap (view currentPlayer) S.get
-            move currentPlayer (Move from to)
-                
+            moveResult <- move currentPlayer (Move from to)
+            S.when (moveResult == GameOver) $ S.put defaultGameState
+            return moveResult
+
         case moveResult of
-            GameOver -> do
-                webM $ S.put defaultGameState
-                json $ object []
-            GameContinues -> json $ object []
+            GameOver -> emptyJsonResponse
+            GameContinues -> emptyJsonResponse
             InvalidMove -> do
                 status status400
                 text "Invalid move"

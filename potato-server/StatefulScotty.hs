@@ -16,6 +16,7 @@ module StatefulScotty(
     , modify
     , startScotty
     , runWebMState
+    , getWebMState
 ) where
 
 import Control.Concurrent.STM
@@ -49,9 +50,14 @@ newtype WebM appState a = WebM { runWebM :: ReaderT (TVar appState) IO a }
 webM :: MonadTrans t => WebM appState a -> t (WebM appState) a
 webM = lift
 
-instance MonadState s (WebM s) where
-    get = ask >>= liftIO . readTVarIO
-    put x = ask >>= liftIO . atomically . flip writeTVar x
+-- This instance is not disabled, because using it can lead to
+-- consistency problems,
+--instance MonadState s (WebM s) where
+--   get = ask >>= liftIO . readTVarIO
+--    put x = ask >>= liftIO . atomically . flip writeTVar x
+
+getWebMState :: WebM appState appState
+getWebMState = ask >>= liftIO . readTVarIO
 
 -- Some helpers to make this feel more like a state monad.
 --gets :: (appState -> b) -> WebM appState b

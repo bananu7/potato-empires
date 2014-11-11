@@ -7,7 +7,7 @@ import Control.Monad.State
 import System.Random
 
 createTestGameState :: GameMap -> GameState
-createTestGameState m = createGameState m (mkStdGen 1)
+createTestGameState m = createGameState m
 
 {-# ANN module ("HLint: ignore Redundant do" :: String) #-}
 {-# ANN module ("HLint: ignore Redundant bracket" :: String) #-}

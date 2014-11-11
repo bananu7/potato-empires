@@ -54,13 +54,12 @@ data GameState = GameState {
     _CurrentPlayer :: Player,
     _timestamp :: Timestamp,
     _currentPlayerMoves :: Int,
-    _ActivePlayers :: [Player],
-    _gen :: StdGen
+    _ActivePlayers :: [Player]
 }
 
 data MoveResult = InvalidMove | GameOver | GameContinues deriving (Eq, Show)
 
-createGameState :: GameMap -> StdGen -> GameState
+createGameState :: GameMap -> GameState
 createGameState m = GameState m Redosia 0 defaultPlayerMoves [Redosia, Shitloadnam]
 defaultPlayerMoves :: Int
 defaultPlayerMoves = 2
@@ -109,15 +108,6 @@ move p m = get >>= \g ->
             return GameContinues
     else return InvalidMove
 
-hoist c = do
-    gs <- get
-    let g = _gen gs
-    (res, g') <- lift $ runStateT c g
-    put (gs {_gen = g'})
-    return res
-
-execRandom = hoist . state
-
 applyMove :: Player -> Move -> GameMonad () 
 applyMove p (Move start end) = do
     checkCaptureCity
@@ -128,13 +118,7 @@ applyMove p (Move start end) = do
     checkPlayersEndCondition
     forceEndTurn
     deductPlayerMove
-    addRandomUnit
  where
-    addRandomUnit :: GameMonad ()
-    addRandomUnit = do
-        value <- execRandom $ randomR (1,100)
-        (gameMap . ix (Point 0 0) . unit) .= (Just $ Unit value Redosia)
-
     checkCaptureCity = do 
         game <- get
         let getMaybeUnitAt point = game ^? gameMap . ix point . unit . traverse

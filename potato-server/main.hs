@@ -20,8 +20,13 @@ main = do
     clientDir <- getEnvFallback "POTATO_CLIENT_DIR" "../potato-client"
     generator <- getStdGen
     putStrLn $ "Starting mighty Potato on port " ++ port ++ " with client in '" ++ clientDir ++ "'"
-    let initialState = createGameState initialMap generator
-    startScotty (read port) (app clientDir initialState) initialState
+
+    let initialGameState = createGameState initialMap
+    let initialServerState = ServerState { _gameState = initialGameState,
+                                           _gen = generator
+                                         }
+
+    startScotty (read port) (app clientDir initialGameState) initialServerState
     where
         getEnvFallback :: String -> String -> IO String
         getEnvFallback n f = handleJust extractNotFound (const $ return f) $ getEnv n

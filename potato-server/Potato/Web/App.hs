@@ -36,36 +36,36 @@ app clientDir defaultGameState = do
     middleware $ staticPolicy (addBase clientDir)
 
     get "/cities" $ do
-        game <- webM getWebMState
+        game <- getWebMState
         json $ object ["cities" .= (combinePairs $ getCitiesList game)]
 
     get "/units" $ do 
-        game <- webM getWebMState
+        game <- getWebMState
         json $ object ["units" .= (combinePairs $ getUnitsList game)]
 
     get "/map" $ do
-        game <- webM getWebMState
+        game <- getWebMState
         json $ getFieldTypesList game
 
     get "/units/add" $ do
         let myNewUnit = (Unit 99 Redosia)
-        webM . runWebMState $ gameMap %= (ix (Point 1 1) . unit .~ Just myNewUnit)
+        runWebMState $ gameMap %= (ix (Point 1 1) . unit .~ Just myNewUnit)
         redirect "/units"
     
     get "/initial" $ do
-        game <- webM getWebMState
+        game <- getWebMState
         json $ createInitialStatePacket game
 
     get "/" $ do
         file $ clientDir ++ "/index.html"
 
     get "/update" $ do
-        game <- webM getWebMState
+        game <- getWebMState
         json $ createUpdatePacket game
 
     post "/move" $ do
         MovePacket from to <- jsonData
-        moveResult <- webM . runWebMState $ do
+        moveResult <- runWebMState $ do
             currentPlayer <- fmap (view currentPlayer) S.get
             moveResult <- move currentPlayer (Move from to)
             S.when (moveResult == GameOver) $ S.put defaultGameState

@@ -56,8 +56,11 @@ webM = lift
 --   get = ask >>= liftIO . readTVarIO
 --    put x = ask >>= liftIO . atomically . flip writeTVar x
 
-getWebMState :: WebM appState appState
-getWebMState = ask >>= liftIO . readTVarIO
+getWebMState_ :: WebM appState appState
+getWebMState_ = ask >>= liftIO . readTVarIO
+
+getWebMState :: MonadTrans t => t (WebM appState) appState
+getWebMState = webM getWebMState_
 
 -- Some helpers to make this feel more like a state monad.
 --gets :: (appState -> b) -> WebM appState b
@@ -66,14 +69,17 @@ getWebMState = ask >>= liftIO . readTVarIO
 --modify :: (appState -> appState) -> WebM appState ()
 --modify f = ask >>= liftIO . atomically . flip modifyTVar' f
 
-runWebMState :: State appState a -> WebM appState a
-runWebMState f = do
+runWebMState_ :: State appState a -> WebM appState a
+runWebMState_ f = do
     appStateTVar <- ask
     liftIO . atomically $ do
         appState <- readTVar appStateTVar
         let (fResult, appState') = runState f appState
         writeTVar appStateTVar appState'
         return fResult
+
+runWebMState :: MonadTrans t => State appState a -> t (WebM appState) a
+runWebMState x = webM $ runWebMState_ x
 
 startScotty port app = do 
     sync <- newTVarIO def  

@@ -98,7 +98,6 @@ isValid player game (Move start end) =
             where manhattanDistance (Point x1 y1) (Point x2 y2) = abs (x2-x1) + abs (y2-y1)
       
 -- |Returns Just new game state if the move is valid, nothing otherwise.
---move :: Player -> Move -> GameState -> Maybe GameState
 move :: Player -> Move -> GameMonad MoveResult
 move p m = get >>= \g -> 
     if (isValid p g m)
@@ -121,14 +120,14 @@ execRandom = hoist . state
 
 applyMove :: Player -> Move -> GameMonad () 
 applyMove p (Move start end) = do
+    checkCaptureCity
     gameMap %= changeDestination
     changeStart
     timestamp %= (+1)
-    checkCaptureCity
     generateUnits
-    deductPlayerMove
-    forceEndTurn
     checkPlayersEndCondition
+    forceEndTurn
+    deductPlayerMove
     addRandomUnit
  where
     addRandomUnit :: GameMonad ()
@@ -136,7 +135,16 @@ applyMove p (Move start end) = do
         value <- execRandom $ randomR (1,100)
         (gameMap . ix (Point 0 0) . unit) .= (Just $ Unit value Redosia)
 
-    checkCaptureCity = (gameMap . ix end . city . traverse . conqueror) .= (Just p)
+    checkCaptureCity = do 
+        game <- get
+        let getMaybeUnitAt point = game ^? gameMap . ix point . unit . traverse
+            maybeOtherUnit = getMaybeUnitAt end
+            aUnit = fromJust $ getMaybeUnitAt start
+            capture = (gameMap . ix end . city . traverse . conqueror) .= (Just p)
+        case maybeOtherUnit of
+            Nothing -> capture
+            Just otherUnit ->
+                when ((battle aUnit otherUnit) ^. owner == p) capture
 
     changeDestination gm = case maybeOtherUnit of
         Nothing -> setDestinationUnit gm aUnit
@@ -206,8 +214,11 @@ battle unitA unitB =
            else newUnit          
 
 nextPlayer :: GameState -> Player -> Player
-nextPlayer g p = head . tail . dropWhile (/= p) . cycle $ (g ^. activePlayers)
-
+nextPlayer g p = 
+    let actPlayers = g ^. activePlayers 
+    in if length actPlayers == 1 then head actPlayers
+        else head . tail . dropWhile (/= p) . cycle $ actPlayers
+        
 gameOver :: GameState -> Bool
 gameOver g = (g ^. currentPlayer) == nextPlayer g (g ^. currentPlayer)
                                 

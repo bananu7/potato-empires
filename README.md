@@ -4,6 +4,8 @@ Potato Empires is an turn-based strategy game.
 
 ## Installation ##
 
+[![Circle CI](https://circleci.com/gh/bananu7/potato-empires/tree/master.png?style=badge)](https://circleci.com/gh/bananu7/potato-empires/tree/master)
+
 ### The Client ###
 The client is a standalone local file at this moment.
 

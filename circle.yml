@@ -7,6 +7,6 @@ general:
   build_dir: potato-server
 deployment:
   staging:
-    branch: master
+    branch: deploy
     heroku:
       appname: squareshit

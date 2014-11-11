@@ -14,13 +14,24 @@ import StatefulScotty
 import Web.Scotty.Trans hiding (get, post)
 import qualified Web.Scotty.Trans as Scotty (get, post)
 import Data.Aeson.Types hiding (Array)
-import Data.Text.Lazy (Text, pack)
+import Data.Text.Lazy (Text)
 import Network.Wai.Middleware.RequestLogger
 import qualified Control.Monad.State as S
 import Control.Lens hiding (index, (.=))
 import Network.HTTP.Types
 import Network.Wai.Middleware.Static
 import System.Random
+import Control.Applicative
+
+data ServerState = ServerState {
+    _gameState :: GameState,
+    _gen :: StdGen
+    }
+
+makeLenses ''ServerState
+
+
+-- Those helpers make writing handlers below a bit more convenient
 
 setCorsHeader = setHeader "Access-Control-Allow-Origin" "*"
 
@@ -33,14 +44,8 @@ get = executeWithCors Scotty.get
 
 emptyJsonResponse = json $ object []
 
-data ServerState = ServerState {
-    _gameState :: GameState,
-    _gen :: StdGen
-    }
-
-makeLenses ''ServerState
-
---hoistStateWithLens :: Simple Lens ServerState GameState -> S.State GameState a -> S.State ServerState a
+-- This is a rather generic function that allows easily
+-- narrowing a State computation via a Lens.
 hoistStateWithLens :: S.MonadState outerState m => 
                       Simple Lens outerState innerState -> 
                       S.State innerState a ->
@@ -52,7 +57,7 @@ hoistStateWithLens acc op = do
     S.put (s & acc .~ sp')
     return res
 
-getGameState = fmap (view gameState) getWebMState
+getGameState = (view gameState) <$> getWebMState
 runGameState x = runWebMState $ hoistStateWithLens gameState x
 runRandom x = runWebMState $ hoistStateWithLens gen (S.state x)
         
@@ -89,9 +94,10 @@ app clientDir defaultGameState = do
         game <- getGameState
         json $ createUpdatePacket game
 
-    get "/random" $ do
-        x <- runRandom $ randomR (1 :: Int,100)
-        text . pack . show $ x
+    -- sample use of runRandom
+    --get "/random" $ do
+    --    x <- runRandom $ randomR (1 :: Int,100)
+    --    text . pack . show $ x
 
     post "/move" $ do
         MovePacket from to <- jsonData

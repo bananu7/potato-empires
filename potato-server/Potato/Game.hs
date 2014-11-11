@@ -14,7 +14,6 @@ import Data.Array
 import Data.Array.IArray (amap)
 import Data.Maybe
 import Data.List
-import System.Random
 
 data Point = Point Int Int deriving (Show, Eq, Ord)
 instance Ix Point where

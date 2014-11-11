@@ -59,10 +59,10 @@ hoistStateWithLens acc op = do
 
 getGameState = (view gameState) <$> getWebMState
 runGameState x = runWebMState $ hoistStateWithLens gameState x
-runRandom x = runWebMState $ hoistStateWithLens gen (S.state x)
-        
-app :: String -> GameState -> ScottyT Text (WebM ServerState) ()
-app clientDir defaultGameState = do
+runRandom x = runWebMState $ hoistStateWithLens gen x
+
+app :: String -> S.State StdGen GameMap -> ScottyT Text (WebM ServerState) ()
+app clientDir mapGenerator = do
     middleware logStdoutDev
     middleware $ staticPolicy (addBase clientDir)
 
@@ -96,7 +96,7 @@ app clientDir defaultGameState = do
 
     -- sample use of runRandom
     --get "/random" $ do
-    --    x <- runRandom $ randomR (1 :: Int,100)
+    --    x <- runRandom $ state . randomR (1 :: Int,100)
     --    text . pack . show $ x
 
     post "/move" $ do
@@ -104,11 +104,13 @@ app clientDir defaultGameState = do
         moveResult <- runGameState $ do
             currentPlayer <- fmap (view currentPlayer) S.get
             moveResult <- move currentPlayer (Move from to)
-            S.when (moveResult == GameOver) $ S.put defaultGameState
             return moveResult
 
         case moveResult of
-            GameOver -> emptyJsonResponse
+            GameOver -> do 
+                newGS <- createGameState <$> runRandom mapGenerator
+                runGameState $ S.put newGS
+                emptyJsonResponse
             GameContinues -> emptyJsonResponse
             InvalidMove -> do
                 status status400

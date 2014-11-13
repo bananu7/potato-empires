@@ -4,10 +4,6 @@ import Test.Hspec
 import Potato.Game
 import Control.Lens hiding (index)
 import Control.Monad.State
-import System.Random
-
-createTestGameState :: GameMap -> GameState
-createTestGameState m = createGameState m
 
 {-# ANN module ("HLint: ignore Redundant do" :: String) #-}
 {-# ANN module ("HLint: ignore Redundant bracket" :: String) #-}
@@ -22,7 +18,7 @@ spec = do
 
     describe "conquering cities: " $ do
         it "lost battle should not change city ownership" $ do
-            let initialState = createTestGameState $ emptyMap
+            let initialState = createGameState $ emptyMap
                               & (ix (Point 0 0).unit) `set` (Just $ Unit 12 Shitloadnam)
                               & (ix (Point 0 0).city) `set` (Just $ City "Red city" (Just Shitloadnam))
                               & (ix (Point 1 0).unit) `set` (Just $ Unit 10 Redosia)
@@ -31,7 +27,7 @@ spec = do
             (execState act initialState) ^? (gameMap . ix (Point 0 0). city . traverse . conqueror . traverse) `shouldBe` (Just Shitloadnam)
 
     describe "game over: " $ do
-        let initialState = createTestGameState $ emptyMap
+        let initialState = createGameState $ emptyMap
                               & (ix (Point 0 0).unit) `set` (Just $ Unit 12 Redosia)
                               & (ix (Point 0 0).city) `set` (Just $ City "Red city" (Just Redosia))
                               & (ix (Point 1 0).city) `set` (Just $ City "Shit city" (Just Shitloadnam))
@@ -42,7 +38,7 @@ spec = do
             (evalState act initialState)  `shouldBe` GameOver
 
     describe "game over in turn ending move: " $ do
-        let initialState = createTestGameState $ emptyMap
+        let initialState = createGameState $ emptyMap
                               & (ix (Point 0 0).unit) `set` (Just $ Unit 12 Redosia)
                               & (ix (Point 0 0).city) `set` (Just $ City "Red city" (Just Redosia))
                               & (ix (Point 1 0).city) `set` (Just $ City "Shit city" (Just Shitloadnam))
@@ -54,25 +50,25 @@ spec = do
 
     describe "move validation: " $ do
         it "should reject move outside of map's boundaries" $ do
-            let initialState = createTestGameState $ emptyMap
+            let initialState = createGameState $ emptyMap
                                   & (ix (Point 0 0).unit) `set` (Just $ Unit 12 Redosia)
                 act = move Redosia $ Move (Point 0 0) (Point (negate 1) 0)
                 in (evalState act initialState) `shouldBe` InvalidMove
 
         it "should reject move of other player's unit" $ do
-            let initialState = createTestGameState $ emptyMap
+            let initialState = createGameState $ emptyMap
                                   & (ix (Point 0 0).unit) `set` (Just $ Unit 12 Shitloadnam)
                 act = move Redosia $ Move (Point 0 0) (Point 1 0)
                 in (evalState act initialState) `shouldBe` InvalidMove
 
         it "should reject move if it's other player's turn" $ do
-            let initialState = createTestGameState $ emptyMap
+            let initialState = createGameState $ emptyMap
                                   & (ix (Point 0 0).unit) `set` (Just $ Unit 12 Shitloadnam)
                 act = move Shitloadnam $ Move (Point 0 0) (Point 1 0)
                 in (evalState act initialState) `shouldBe` InvalidMove
 
         it "should reject move if there's no unit on 'from' field" $ do
-            let initialState = createTestGameState $ emptyMap
+            let initialState = createGameState $ emptyMap
                 act = move Redosia $ Move (Point 0 0) (Point 1 0)
                 in (evalState act initialState) `shouldBe` InvalidMove
 

@@ -22,10 +22,6 @@ module StatefulScotty(
 import Control.Concurrent.STM
 import Control.Monad.Reader
 
-import Data.Default
---import Data.String
---import Data.Text.Lazy (Text)
-
 import Web.Scotty.Trans
 import Control.Monad.State.Class
 import Control.Monad.State

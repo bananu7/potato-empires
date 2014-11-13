@@ -26,8 +26,6 @@ spec = do
                 act = move Redosia $ Move (Point 1 0) (Point 0 0)
             (execState act initialState) ^? (gameMap . ix (Point 0 0). city . traverse . conqueror . traverse) `shouldBe` (Just Shitloadnam)
 
-
-
     describe "game over: " $ do
         let initialState = createGameState $ emptyMap
                               & (ix (Point 0 0).unit) `set` (Just $ Unit 12 Redosia)
@@ -70,7 +68,7 @@ spec = do
                 in (evalState act initialState) `shouldBe` InvalidMove
 
         it "should reject move if there's no unit on 'from' field" $ do
-            let initialState = createGameState emptyMap
+            let initialState = createGameState $ emptyMap
                 act = move Redosia $ Move (Point 0 0) (Point 1 0)
                 in (evalState act initialState) `shouldBe` InvalidMove
 

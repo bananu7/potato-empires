@@ -5,6 +5,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
+
 module Potato.Game where 
 
 import Control.Monad.State
@@ -72,7 +73,7 @@ makeLenses ''Unit
 
 data Move = Move Point Point deriving (Show, Eq)
 
-type GameMonad a = State GameState a
+type GameMonad = State GameState
 
 isValid :: Player -> GameState -> Move -> Bool
 isValid player game (Move start end) =
@@ -105,7 +106,6 @@ move p m = get >>= \g ->
         else
             return GameContinues
     else return InvalidMove
-
 
 applyMove :: Player -> Move -> GameMonad () 
 applyMove p (Move start end) = do

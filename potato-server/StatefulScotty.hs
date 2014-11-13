@@ -22,10 +22,6 @@ module StatefulScotty(
 import Control.Concurrent.STM
 import Control.Monad.Reader
 
-import Data.Default
---import Data.String
---import Data.Text.Lazy (Text)
-
 import Web.Scotty.Trans
 import Control.Monad.State.Class
 import Control.Monad.State
@@ -77,8 +73,8 @@ runWebMState x =
 --modify :: (appState -> appState) -> WebM appState ()
 --modify f = ask >>= liftIO . atomically . flip modifyTVar' f
 
-startScotty port app = do 
-    sync <- newTVarIO def  
+startScotty port app initialState = do 
+    sync <- newTVarIO initialState
     let runM m = runReaderT (runWebM m) sync
         runActionToIO = runM
     scottyT port runM runActionToIO app

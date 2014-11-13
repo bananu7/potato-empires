@@ -7,7 +7,10 @@ import Data.HashMap.Strict (union)
 import Control.Applicative
 import Control.Monad
 
+-- This function is a helper that concatenates JSON data
 unionObjects (Object a) (Object b) = a `union` b
+unionObjects _ _ = error "You can't union anything else than objects"
+
 combinePairs :: (ToJSON a, ToJSON b) => [(a,b)] -> [Object]
 combinePairs = map (\(a,b) -> toJSON a `unionObjects` toJSON b)
 
@@ -28,8 +31,9 @@ instance ToJSON MapField where
     toJSON = toJSON . show
 
 instance ToJSON FieldType where
-    toJSON f | f == Land = String "grass"
-             | f == Water = String "water" 
+    toJSON f = case f of
+        Land -> String "grass"
+        Water -> String "water"
 
 instance ToJSON Player where
     toJSON = toJSON . show

@@ -8,45 +8,14 @@
 
 module Potato.Game where 
 
+import Potato.GameMap
+import Potato.Types
 import Control.Monad.State
 import Control.Lens hiding (index)
 import Data.Array
 import Data.Array.IArray (amap)
 import Data.Maybe
 import Data.List
-
-data Point = Point Int Int deriving (Show, Eq, Ord)
-instance Ix Point where
-    range (Point minX minY, Point maxX maxY) = [Point x y | x <- [minX .. maxX], y <- [minY .. maxY]] 
-    inRange (Point minX minY, Point maxX maxY) (Point x y) = and [x >= minX, y >= minY, x <= maxX, y <= maxY] 
-   
-    -- implemented the same as default (a,b) Ix instance
-    index r@(Point l1 l2, Point u1 u2) p@(Point i1 i2) | inRange r p = index (l1,u1) i1 * rangeSize (l2,u2) + index (l2,u2) i2 
-                                                           | otherwise = error "Out of range"
-
-data FieldType = Land | Water deriving (Show, Eq)
-
-data City = City {
-    _name :: String,
-    _conqueror :: Maybe Player
-} deriving (Show, Eq)
-
-data Unit = Unit {
-    _BattleValue :: BattleValue,
-    _owner :: Player
-} deriving (Show, Eq)
-
-data MapField = MapField { 
-    _FieldType :: FieldType,
-    _city :: Maybe City,
-    _unit :: Maybe Unit
-} deriving (Eq)
-
-type GameMap = Array Point MapField
-
-type BattleValue = Int
-data Player = Redosia | Shitloadnam deriving (Show, Eq, Ord, Enum)
-type Timestamp = Int
 
 data GameState = GameState {
     _GameMap :: GameMap,
@@ -56,20 +25,15 @@ data GameState = GameState {
     _ActivePlayers :: [Player]
 }
 
+makeFields ''GameState
+makeLenses ''GameState
+
 data MoveResult = InvalidMove | GameOver | GameContinues deriving (Eq, Show)
 
 createGameState :: GameMap -> GameState
 createGameState m = GameState m Redosia 0 defaultPlayerMoves [Redosia, Shitloadnam]
 defaultPlayerMoves :: Int
 defaultPlayerMoves = 2
-
-makeLenses ''MapField
-makeFields ''GameState
-makeFields ''City
-makeFields ''Unit
-makeLenses ''GameState
-makeLenses ''City
-makeLenses ''Unit
 
 data Move = Move Point Point deriving (Show, Eq)
 
@@ -224,8 +188,3 @@ getFieldTypesList game = toListOfLists $ amap (^. fieldType) gmap
            where
               row y = [ a ! Point x y | x <- [minX .. maxX]]
               (Point minX minY, Point maxX maxY) = bounds a
-
-emptyMap :: GameMap
-emptyMap = array mapRange (map (,MapField Land Nothing Nothing) $ range mapRange)
-            where
-                 mapRange = (Point 0 0, Point 9 9)

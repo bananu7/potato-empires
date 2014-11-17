@@ -8,6 +8,7 @@
 
 module Potato.Web.App where 
 import Potato.Game
+import Potato.Types
 import Potato.Web.Serialization
 import Potato.Web.Types
 import StatefulScotty

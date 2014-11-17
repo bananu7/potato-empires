@@ -2,6 +2,8 @@ module Main where
 import Test.Hspec
 
 import Potato.Game
+import Potato.Types
+import Potato.GameMap
 import Control.Lens hiding (index)
 import Control.Monad.State
 

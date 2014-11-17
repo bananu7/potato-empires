@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 module Potato.Web.Types where
+import Potato.Types
 import Potato.Game
 import Control.Lens
 import GHC.Generics

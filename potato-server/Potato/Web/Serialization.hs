@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Potato.Web.Serialization where
 import Data.Aeson.Types
-import Potato.Game
+import Potato.Types
 import Potato.Web.Types
 import Data.HashMap.Strict (union)
 import Control.Applicative

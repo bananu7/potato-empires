@@ -67,12 +67,3 @@ generateRandomPoint = do
     x <- state $ randomR (0, 9)
     y <- state $ randomR (0, 9)
     return $ Point x y
-
-{-
-initialMap = emptyMap & (ix (Point 0 1).unit) `set` (Just $ Unit 12 Redosia)
-                      & (ix (Point 3 4).unit) `set` (Just $ Unit 10 Shitloadnam)
-                      & (ix (Point 1 1).city) `set` (Just $ City "Cityville" (Just Redosia))
-                      & (ix (Point 8 8).city) `set` (Just $ City "Townville" (Just Shitloadnam))
-                      & (ix (Point 4 5).city) `set` (Just $ City "Capturetown" Nothing)
-                                
--}

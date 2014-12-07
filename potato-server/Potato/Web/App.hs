@@ -26,6 +26,10 @@ import Network.Wai.Middleware.Static
 import System.Random
 import Control.Applicative
 import Data.HashMap.Lazy
+import Control.Monad.Trans.Either
+import Control.Monad.Trans (lift)
+import Text.Read (readMaybe)
+import Data.Text.Lazy (unpack)
 
 type PlayerTokenMap = HashMap Token Player 
 
@@ -73,6 +77,8 @@ getGameState = (view gameState) <$> getWebMState
 runGameState x = runWebMState $ hoistStateWithLens gameState x
 runRandom x = runWebMState $ hoistStateWithLens gen x
 
+data MoveHandlerError = NoAuthHeader | MalformedHeader | NoSuchPlayer deriving (Eq, Show)
+
 app :: String -> S.State StdGen GameMap -> ScottyT Text (WebM ServerState) ()
 app clientDir mapGenerator = do
     middleware logStdoutDev
@@ -113,25 +119,49 @@ app clientDir mapGenerator = do
 
     post "/move" $ do
         ts <- runWebMState $ use tokens
-        maybeToken <- safeParam "token"
-        case maybeToken of
-            Nothing -> status status401
-            Just token -> do
-                let p = lookup token ts
-                case p of 
-                    Nothing -> status status403
-                    Just player -> do
-                        MovePacket from to <- jsonData
-                        moveResult <- runGameState $ do
-                            moveResult <- move player (Move from to)
-                            return moveResult
 
-                        case moveResult of
-                            GameOver -> do 
-                                newGS <- createGameState <$> runRandom mapGenerator
-                                runGameState $ S.put newGS
-                                emptyJsonResponse
-                            GameContinues -> emptyJsonResponse
-                            InvalidMove -> do
-                                status status406
-                                text "Invalid move"
+        eitherPlayerError <- runEitherT $ extractHeader >>= parseHeader >>= findPlayer ts       
+
+        case eitherPlayerError of
+            (Right player) -> do
+                MovePacket from to <- jsonData
+                moveResult <- runGameState $ do
+                    moveResult <- move player (Move from to)
+                    return moveResult
+
+                case moveResult of
+                    GameOver -> do
+                        newGS <- createGameState <$> runRandom mapGenerator
+                        runGameState $ S.put newGS
+                        emptyJsonResponse
+                    GameContinues -> emptyJsonResponse
+                    InvalidMove -> do
+                        status status400
+                        text "Invalid move"
+
+            (Left NoAuthHeader) -> do
+                setHeader "WWW-Authenticate" "Token realm=\"/\""
+                status status401
+
+            (Left MalformedHeader) -> do
+                status status401
+
+            (Left NoSuchPlayer) -> do
+                status status401           
+
+    where
+        extractHeader = do
+            maybeTokenText <- lift (header "Authorization")
+            (unpack <$> maybeTokenText) `valueOr` NoAuthHeader
+
+        parseHeader tokenString = parseToken tokenString `valueOr` MalformedHeader
+        findPlayer tokens token = lookup token tokens `valueOr` NoSuchPlayer
+
+        valueOr mval err = case mval of
+            Just val -> right val
+            Nothing -> left err
+
+        parseToken str = p (words str)
+            where p :: [String] -> Maybe Token
+                  p ["Token", token] = readMaybe token
+                  p _ = Nothing

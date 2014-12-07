@@ -354,7 +354,14 @@ var handleClick = function (game, event) {
           to: { x: game.mouse.x, y: game.mouse.y }
       };
 
-      $.post(config.serverUrl + '/move', JSON.stringify(moveData));
+      $.post({
+        url: config.serverUrl + '/move',
+        headers: {
+          Authorization: 'Token 1'
+        },
+        processData: false,
+        data: JSON.stringify(moveData)
+      });
         
       deselectUnit(game);
       break;

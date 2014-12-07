@@ -61,7 +61,8 @@ executable potato-server
                        http-types,
                        wai-middleware-static,
                        logfloat < 0.11.1,
-                       random
+                       random,
+                       either
 
 test-suite Test
   ghc-options: -Wall -ferror-spans -fno-warn-name-shadowing
@@ -72,7 +73,8 @@ test-suite Test
                        hspec >= 1.8,
                        lens > 4,
                        mtl, data-default, text, array, unordered-containers,
-                       random
+                       random,
+                       either
 
 
   default-language:    Haskell2010

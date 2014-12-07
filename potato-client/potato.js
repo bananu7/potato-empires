@@ -354,13 +354,18 @@ var handleClick = function (game, event) {
           to: { x: game.mouse.x, y: game.mouse.y }
       };
 
-      $.post({
+      $.ajax({
+        type: 'POST',
         url: config.serverUrl + '/move',
         headers: {
           Authorization: 'Token 1'
-        },
+        },        
+        contentType: 'application/json; charset=UTF-8',
         processData: false,
         data: JSON.stringify(moveData)
+      })
+      .fail(function(){
+        alert("move failed!");
       });
         
       deselectUnit(game);

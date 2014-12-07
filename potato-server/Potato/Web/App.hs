@@ -52,6 +52,8 @@ executeWithCors method r action = method r $ do
 post = executeWithCors Scotty.post
 get = executeWithCors Scotty.get
 
+safeParam name = (Just <$> param name) `rescue` (const $ return Nothing)
+
 emptyJsonResponse = json $ object []
 
 -- This is a rather generic function that allows easily
@@ -111,23 +113,25 @@ app clientDir mapGenerator = do
 
     post "/move" $ do
         ts <- runWebMState $ use tokens
-        token <- param "token" `rescue` (const $ return 0)
-        let p = lookup token ts
+        maybeToken <- safeParam "token"
+        case maybeToken of
+            Nothing -> status status401
+            Just token -> do
+                let p = lookup token ts
+                case p of 
+                    Nothing -> status status403
+                    Just player -> do
+                        MovePacket from to <- jsonData
+                        moveResult <- runGameState $ do
+                            moveResult <- move player (Move from to)
+                            return moveResult
 
-        case p of 
-            Nothing -> status status403
-            Just player -> do
-                MovePacket from to <- jsonData
-                moveResult <- runGameState $ do
-                    moveResult <- move player (Move from to)
-                    return moveResult
-
-                case moveResult of
-                    GameOver -> do 
-                        newGS <- createGameState <$> runRandom mapGenerator
-                        runGameState $ S.put newGS
-                        emptyJsonResponse
-                    GameContinues -> emptyJsonResponse
-                    InvalidMove -> do
-                        status status406
-                        text "Invalid move"
+                        case moveResult of
+                            GameOver -> do 
+                                newGS <- createGameState <$> runRandom mapGenerator
+                                runGameState $ S.put newGS
+                                emptyJsonResponse
+                            GameContinues -> emptyJsonResponse
+                            InvalidMove -> do
+                                status status406
+                                text "Invalid move"

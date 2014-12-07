@@ -256,7 +256,8 @@ var initializePotato = function () {
     units: [],
 
     selectionState: 'FREE',
-    selectedUnit: null
+    selectedUnit: null,
+    token: null,
   };
 
   game.images = loadImages('img');
@@ -269,7 +270,7 @@ var initializePotato = function () {
       width: game.board.width * game.board.tileSize,
       height: game.board.height * game.board.tileSize
     })
-    .appendTo('body')
+    .prependTo('body')
     .mousemove(function (event) {
       updateMouse(game, event);
     })
@@ -291,6 +292,25 @@ var initializePotato = function () {
       
     game.statusDisplay = $('<div/>')
       .appendTo('body');
+
+    $(".tableSitButton").click(function() {
+      game.faction = $(this).parent().children("span:first-child").text();
+
+      alert('sitting as ' + game.faction);
+      $(".tableSitButton").prop("disabled", true);
+      $(this).parent().addClass("selected");
+
+      switch (game.faction) {
+        case 'Redosia':
+          game.token = 1;
+          break;
+        case 'Shitloadnam':
+          game.token = 2;
+          break;
+        default:
+          throw "Invalid faction identifier.";
+      }
+    });
     
     game.ctx = game.canvas.get(0).getContext('2d');
 
@@ -313,6 +333,11 @@ var updateMouse = function (game, event) {
 };
 
 var handleClick = function (game, event) {
+  if (!game.faction) {
+    // without a faction/token, we're just observing
+    return;
+  }
+
   switch (game.selectionState) {
     case 'FREE':
       // this is a selection attempt
@@ -324,6 +349,9 @@ var handleClick = function (game, event) {
           break;
       
       if (unit.owner !== game.currentPlayer)
+          break;
+
+      if (unit.owner !== game.faction)
           break;
       
       game.selectionState = 'UNIT';
@@ -358,7 +386,7 @@ var handleClick = function (game, event) {
         type: 'POST',
         url: config.serverUrl + '/move',
         headers: {
-          Authorization: 'Token 1'
+          Authorization: 'Token ' + game.token
         },        
         contentType: 'application/json; charset=UTF-8',
         processData: false,

@@ -14,3 +14,22 @@ canvas {
     max-height: 100%;
     max-width: 100%;
 }
+
+div#tableControl {
+	padding: 10px;
+	border: 1px solid #aaa;
+	min-width: 300px;
+	background-color: #eee;
+	float: bottom;
+}
+
+div.tableElement {
+	margin-right: 10px;
+	display: inline;
+	border: 1px solid #aaa;
+	padding: 5px;
+}
+
+div.selected {
+	background-color: #3e3;
+}

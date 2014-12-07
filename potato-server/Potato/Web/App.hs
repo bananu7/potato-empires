@@ -4,9 +4,11 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RankNTypes #-}
 
 module Potato.Web.App where 
+import Prelude hiding (lookup)
 import Potato.Game
 import Potato.Types
 import Potato.Web.Serialization
@@ -23,14 +25,21 @@ import Network.HTTP.Types
 import Network.Wai.Middleware.Static
 import System.Random
 import Control.Applicative
+import Data.HashMap.Lazy
+
+type PlayerTokenMap = HashMap Token Player 
 
 data ServerState = ServerState {
     _gameState :: GameState,
+    _tokens :: PlayerTokenMap,
     _gen :: StdGen
     }
 
 makeLenses ''ServerState
 
+
+createPlayerTokens :: PlayerTokenMap    
+createPlayerTokens = fromList [(1, Redosia), (2, Shitloadnam)]
 
 -- Those helpers make writing handlers below a bit more convenient
 
@@ -101,18 +110,24 @@ app clientDir mapGenerator = do
     --    text . pack . show $ x
 
     post "/move" $ do
-        MovePacket from to <- jsonData
-        moveResult <- runGameState $ do
-            currentPlayer <- fmap (view currentPlayer) S.get
-            moveResult <- move currentPlayer (Move from to)
-            return moveResult
+        ts <- runWebMState $ use tokens
+        token <- param "token" `rescue` (const $ return 0)
+        let p = lookup token ts
 
-        case moveResult of
-            GameOver -> do 
-                newGS <- createGameState <$> runRandom mapGenerator
-                runGameState $ S.put newGS
-                emptyJsonResponse
-            GameContinues -> emptyJsonResponse
-            InvalidMove -> do
-                status status400
-                text "Invalid move"
+        case p of 
+            Nothing -> status status403
+            Just player -> do
+                MovePacket from to <- jsonData
+                moveResult <- runGameState $ do
+                    moveResult <- move player (Move from to)
+                    return moveResult
+
+                case moveResult of
+                    GameOver -> do 
+                        newGS <- createGameState <$> runRandom mapGenerator
+                        runGameState $ S.put newGS
+                        emptyJsonResponse
+                    GameContinues -> emptyJsonResponse
+                    InvalidMove -> do
+                        status status406
+                        text "Invalid move"

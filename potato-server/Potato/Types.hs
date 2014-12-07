@@ -54,3 +54,4 @@ type Timestamp = Int
 
 type GameMap = Array Point MapField
 
+type Token = Int

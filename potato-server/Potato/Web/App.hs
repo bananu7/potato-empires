@@ -138,7 +138,6 @@ app clientDir mapGenerator = do
         json $ createUpdatePacket game
 
     post "/request-token" $ do
-        status status200
         player <- param "player"
 
         ts <- runWebMState $ use (tableState.tokens)

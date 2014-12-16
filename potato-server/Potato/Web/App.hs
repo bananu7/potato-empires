@@ -25,25 +25,41 @@ import Network.HTTP.Types
 import Network.Wai.Middleware.Static
 import System.Random
 import Control.Applicative
-import Data.HashMap.Lazy
 import Control.Monad.Trans.Either
 import Control.Monad.Trans (lift)
 import Text.Read (readMaybe)
-import Data.Text.Lazy (unpack)
+import Data.Text.Lazy (unpack, pack)
+import Data.Maybe
+import qualified Data.List (find)
 
-type PlayerTokenMap = HashMap Token Player 
+type PlayerTokenMap = [(Token,Player)]
+
+lookupPlayer :: Player -> PlayerTokenMap -> Maybe Token 
+lookupPlayer player xs = fst <$> Data.List.find ((== player) . snd) xs
+
+lookupToken :: Token -> PlayerTokenMap -> Maybe Player 
+lookupToken token xs = snd <$> Data.List.find ((== token) . fst) xs
+
+data TableState = TableState {
+    _tokens :: PlayerTokenMap,
+    _playerCount :: Int -- |represents desired player count
+    }
+makeLenses ''TableState
+
+isTableFull :: TableState -> Bool
+isTableFull t = (length $ t ^. tokens) == (t ^. playerCount)
 
 data ServerState = ServerState {
     _gameState :: GameState,
-    _tokens :: PlayerTokenMap,
+    _tableState :: TableState,
     _gen :: StdGen
     }
-
 makeLenses ''ServerState
 
+createTable = TableState createPlayerTokens 2
 
 createPlayerTokens :: PlayerTokenMap    
-createPlayerTokens = fromList [(1, Redosia), (2, Shitloadnam)]
+createPlayerTokens = []
 
 -- Those helpers make writing handlers below a bit more convenient
 
@@ -55,6 +71,9 @@ executeWithCors method r action = method r $ do
 
 post = executeWithCors Scotty.post
 get = executeWithCors Scotty.get
+
+instance Parsable Player where
+    parseParam = readEither
 
 safeParam name = (Just <$> param name) `rescue` (const $ return Nothing)
 
@@ -76,6 +95,12 @@ hoistStateWithLens acc op = do
 getGameState = (view gameState) <$> getWebMState
 runGameState x = runWebMState $ hoistStateWithLens gameState x
 runRandom x = runWebMState $ hoistStateWithLens gen x
+
+randomWithRepick fLookup xs range = do
+    x <- S.state $ randomR range
+    if isNothing $ fLookup x xs
+        then return x
+        else randomWithRepick fLookup xs range
 
 data MoveHandlerError = NoAuthHeader | MalformedHeader | NoSuchPlayer deriving (Eq, Show)
 
@@ -112,13 +137,29 @@ app clientDir mapGenerator = do
         game <- getGameState
         json $ createUpdatePacket game
 
+    post "/request-token" $ do
+        status status200
+        player <- param "player"
+
+        ts <- runWebMState $ use (tableState.tokens)
+
+        let maybePlayer = lookupPlayer player ts
+        if (isJust maybePlayer)
+            then do
+                status status403
+                text "Seat already taken"
+            else do
+                token <- runRandom $ randomWithRepick lookupToken ts (1,1000)
+                runWebMState $ (tableState.tokens) %= ((token, player):)
+                text . pack $ show token
+
     -- sample use of runRandom
     --get "/random" $ do
     --    x <- runRandom $ state . randomR (1 :: Int,100)
     --    text . pack . show $ x
 
     post "/move" $ do
-        ts <- runWebMState $ use tokens
+        ts <- runWebMState $ use (tableState.tokens)
 
         eitherPlayerError <- runEitherT $ extractHeader >>= parseHeader >>= findPlayer ts       
 
@@ -147,7 +188,7 @@ app clientDir mapGenerator = do
                 status status401
 
             (Left NoSuchPlayer) -> do
-                status status401           
+                status status401
 
     where
         extractHeader = do
@@ -155,7 +196,7 @@ app clientDir mapGenerator = do
             (unpack <$> maybeTokenText) `valueOr` NoAuthHeader
 
         parseHeader tokenString = parseToken tokenString `valueOr` MalformedHeader
-        findPlayer tokens token = lookup token tokens `valueOr` NoSuchPlayer
+        findPlayer tokens token = lookupToken token tokens `valueOr` NoSuchPlayer
 
         valueOr mval err = case mval of
             Just val -> right val

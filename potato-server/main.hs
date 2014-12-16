@@ -25,7 +25,7 @@ main = do
     let initialGameState = createGameState initialRandomMap
     let initialServerState = ServerState { _gameState = initialGameState,
                                            _gen = generator',
-                                           _tokens = createPlayerTokens
+                                           _tableState = createTable
                                          }
 
     startScotty (read port) (app clientDir randomMap) initialServerState

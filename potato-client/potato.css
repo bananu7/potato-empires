@@ -31,5 +31,9 @@ div.tableElement {
 }
 
 div.selected {
-	background-color: #3e3;
+	background-color: #80C15D;
+}
+
+div.statusDisplay {
+	padding: 10px;
 }

@@ -291,7 +291,20 @@ var initializePotato = function () {
     });
       
     game.statusDisplay = $('<div/>')
-      .appendTo('body');
+      .appendTo('body')
+      .addClass('statusDisplay');
+
+    if (localStorage.token) {
+      game.token = Number(localStorage.token);
+      game.faction = localStorage.faction;
+
+      $(".tableSitButton")
+      .prop("disabled", true)
+      .filter(function() {
+        return $(this).parent().children("span:first-child").text() === game.faction;
+      })
+      .parent().addClass("selected");
+    }
 
     $(".tableSitButton").click(function() {
       var $btn = $(this);
@@ -306,12 +319,15 @@ var initializePotato = function () {
         game.faction = faction;
         game.token = token;
 
+        localStorage.token = String(token);
+        localStorage.faction = String(faction);
+
         console.log('sitting as ' + game.faction + " with token " + game.token);
         $(".tableSitButton").prop("disabled", true);
         $btn.parent().addClass("selected");
       })
       .fail(function(d) {
-        console.log(d);
+        alert("Seating failed!");
       });
     });
     

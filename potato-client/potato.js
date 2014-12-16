@@ -294,22 +294,25 @@ var initializePotato = function () {
       .appendTo('body');
 
     $(".tableSitButton").click(function() {
-      game.faction = $(this).parent().children("span:first-child").text();
+      var $btn = $(this);
+      var faction = $(this).parent().children("span:first-child").text();
 
-      alert('sitting as ' + game.faction);
-      $(".tableSitButton").prop("disabled", true);
-      $(this).parent().addClass("selected");
+      $.ajax({
+        url: "/request-token",
+        method: "POST",
+        data: { player: faction }
+      })
+      .done(function(token) {
+        game.faction = faction;
+        game.token = token;
 
-      switch (game.faction) {
-        case 'Redosia':
-          game.token = 1;
-          break;
-        case 'Shitloadnam':
-          game.token = 2;
-          break;
-        default:
-          throw "Invalid faction identifier.";
-      }
+        console.log('sitting as ' + game.faction + " with token " + game.token);
+        $(".tableSitButton").prop("disabled", true);
+        $btn.parent().addClass("selected");
+      })
+      .fail(function(d) {
+        console.log(d);
+      });
     });
     
     game.ctx = game.canvas.get(0).getContext('2d');

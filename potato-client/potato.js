@@ -256,7 +256,8 @@ var initializePotato = function () {
     units: [],
 
     selectionState: 'FREE',
-    selectedUnit: null
+    selectedUnit: null,
+    token: null,
   };
 
   game.images = loadImages('img');
@@ -269,7 +270,7 @@ var initializePotato = function () {
       width: game.board.width * game.board.tileSize,
       height: game.board.height * game.board.tileSize
     })
-    .appendTo('body')
+    .prependTo('body')
     .mousemove(function (event) {
       updateMouse(game, event);
     })
@@ -290,7 +291,45 @@ var initializePotato = function () {
     });
       
     game.statusDisplay = $('<div/>')
-      .appendTo('body');
+      .appendTo('body')
+      .addClass('statusDisplay');
+
+    if (localStorage.token) {
+      game.token = Number(localStorage.token);
+      game.faction = localStorage.faction;
+
+      $(".tableSitButton")
+      .prop("disabled", true)
+      .filter(function() {
+        return $(this).parent().children("span:first-child").text() === game.faction;
+      })
+      .parent().addClass("selected");
+    }
+
+    $(".tableSitButton").click(function() {
+      var $btn = $(this);
+      var faction = $(this).parent().children("span:first-child").text();
+
+      $.ajax({
+        url: "/request-token",
+        method: "POST",
+        data: { player: faction }
+      })
+      .done(function(token) {
+        game.faction = faction;
+        game.token = token;
+
+        localStorage.token = String(token);
+        localStorage.faction = String(faction);
+
+        console.log('sitting as ' + game.faction + " with token " + game.token);
+        $(".tableSitButton").prop("disabled", true);
+        $btn.parent().addClass("selected");
+      })
+      .fail(function(d) {
+        alert("Seating failed!");
+      });
+    });
     
     game.ctx = game.canvas.get(0).getContext('2d');
 
@@ -313,6 +352,11 @@ var updateMouse = function (game, event) {
 };
 
 var handleClick = function (game, event) {
+  if (!game.faction) {
+    // without a faction/token, we're just observing
+    return;
+  }
+
   switch (game.selectionState) {
     case 'FREE':
       // this is a selection attempt
@@ -324,6 +368,9 @@ var handleClick = function (game, event) {
           break;
       
       if (unit.owner !== game.currentPlayer)
+          break;
+
+      if (unit.owner !== game.faction)
           break;
       
       game.selectionState = 'UNIT';
@@ -354,7 +401,19 @@ var handleClick = function (game, event) {
           to: { x: game.mouse.x, y: game.mouse.y }
       };
 
-      $.post(config.serverUrl + '/move', JSON.stringify(moveData));
+      $.ajax({
+        type: 'POST',
+        url: config.serverUrl + '/move',
+        headers: {
+          Authorization: 'Token ' + game.token
+        },        
+        contentType: 'application/json; charset=UTF-8',
+        processData: false,
+        data: JSON.stringify(moveData)
+      })
+      .fail(function(){
+        alert("move failed!");
+      });
         
       deselectUnit(game);
       break;

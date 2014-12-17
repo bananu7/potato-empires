@@ -19,7 +19,7 @@ instance Ix Point where
     index r@(Point l1 l2, Point u1 u2) p@(Point i1 i2) | inRange r p = index (l1,u1) i1 * rangeSize (l2,u2) + index (l2,u2) i2 
                                                        | otherwise = error "Out of range"
 
-data Player = Redosia | Shitloadnam deriving (Show, Eq, Ord, Enum)
+data Player = Redosia | Shitloadnam deriving (Show, Read, Eq, Ord, Enum)
 
 data City = City {
     _name :: String,
@@ -54,3 +54,4 @@ type Timestamp = Int
 
 type GameMap = Array Point MapField
 
+type Token = Int

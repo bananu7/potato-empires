@@ -42,12 +42,12 @@ lookupToken token xs = snd <$> Data.List.find ((== token) . fst) xs
 
 data TableState = TableState {
     _tokens :: PlayerTokenMap,
-    _playerCount :: Int -- |represents desired player count
+    _desiredPlayerCount :: Int
     }
 makeLenses ''TableState
 
 isTableFull :: TableState -> Bool
-isTableFull t = (length $ t ^. tokens) == (t ^. playerCount)
+isTableFull t = (length $ t ^. tokens) == (t ^. desiredPlayerCount)
 
 data ServerState = ServerState {
     _gameState :: GameState,
@@ -151,11 +151,6 @@ app clientDir mapGenerator = do
                 token <- runRandom $ randomWithRepick lookupToken ts (1,1000)
                 runWebMState $ (tableState.tokens) %= ((token, player):)
                 text . pack $ show token
-
-    -- sample use of runRandom
-    --get "/random" $ do
-    --    x <- runRandom $ state . randomR (1 :: Int,100)
-    --    text . pack . show $ x
 
     post "/move" $ do
         ts <- runWebMState $ use (tableState.tokens)

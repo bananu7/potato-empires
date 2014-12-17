@@ -56,10 +56,10 @@ data ServerState = ServerState {
     }
 makeLenses ''ServerState
 
-createTable = TableState createPlayerTokens 2
+instance Parsable Player where
+    parseParam = readEither
 
-createPlayerTokens :: PlayerTokenMap    
-createPlayerTokens = []
+createTable = TableState [] 2
 
 -- Those helpers make writing handlers below a bit more convenient
 
@@ -71,12 +71,6 @@ executeWithCors method r action = method r $ do
 
 post = executeWithCors Scotty.post
 get = executeWithCors Scotty.get
-
-instance Parsable Player where
-    parseParam = readEither
-
-safeParam name = (Just <$> param name) `rescue` (const $ return Nothing)
-
 emptyJsonResponse = json $ object []
 
 -- This is a rather generic function that allows easily
@@ -95,14 +89,6 @@ hoistStateWithLens acc op = do
 getGameState = (view gameState) <$> getWebMState
 runGameState x = runWebMState $ hoistStateWithLens gameState x
 runRandom x = runWebMState $ hoistStateWithLens gen x
-
-randomWithRepick fLookup xs range = do
-    x <- S.state $ randomR range
-    if isNothing $ fLookup x xs
-        then return x
-        else randomWithRepick fLookup xs range
-
-data MoveHandlerError = NoAuthHeader | MalformedHeader | NoSuchPlayer deriving (Eq, Show)
 
 app :: String -> S.State StdGen GameMap -> ScottyT Text (WebM ServerState) ()
 app clientDir mapGenerator = do
@@ -137,66 +123,68 @@ app clientDir mapGenerator = do
         game <- getGameState
         json $ createUpdatePacket game
 
-    post "/request-token" $ do
-        player <- param "player"
+    post "/request-token" handlerRequestToken
+    post "/move" $ handlerMove mapGenerator
 
-        ts <- runWebMState $ use (tableState.tokens)
+handlerRequestToken = do 
+    player <- param "player"
+    ts <- runWebMState $ use (tableState.tokens)
+    let maybePlayer = lookupPlayer player ts
+    if (isJust maybePlayer)
+        then do
+            status status403
+            text "Seat already taken"
+        else do
+            token <- runRandom $ randomWithRepick lookupToken ts (1,1000)
+            runWebMState $ (tableState.tokens) %= ((token, player):)
+            text . pack $ show token
+ where
+    randomWithRepick fLookup xs range = do
+        x <- S.state $ randomR range
+        if isNothing $ fLookup x xs
+            then return x
+            else randomWithRepick fLookup xs range
 
-        let maybePlayer = lookupPlayer player ts
-        if (isJust maybePlayer)
-            then do
-                status status403
-                text "Seat already taken"
-            else do
-                token <- runRandom $ randomWithRepick lookupToken ts (1,1000)
-                runWebMState $ (tableState.tokens) %= ((token, player):)
-                text . pack $ show token
+data MoveHandlerError = NoAuthHeader | MalformedHeader | NoSuchPlayer deriving (Eq, Show)
+handlerMove mapGenerator = do
+    ts <- runWebMState $ use (tableState.tokens)
+    eitherPlayerError <- runEitherT $ extractHeader >>= parseHeader >>= findPlayer ts       
+    case eitherPlayerError of
+        Right player -> do
+            MovePacket from to <- jsonData
+            moveResult <- runGameState $ do
+                moveResult <- move player (Move from to)
+                return moveResult
 
-    post "/move" $ do
-        ts <- runWebMState $ use (tableState.tokens)
+            case moveResult of
+                GameOver -> do
+                    newGS <- createGameState <$> runRandom mapGenerator
+                    runGameState $ S.put newGS
+                    emptyJsonResponse
+                GameContinues -> emptyJsonResponse
+                InvalidMove -> do
+                    status status400
+                    text "Invalid move"
 
-        eitherPlayerError <- runEitherT $ extractHeader >>= parseHeader >>= findPlayer ts       
+        -- Additional information about the reason of failure resides
+        -- in the ignored Left field; not used right now.
+        Left _ -> do
+            setHeader "WWW-Authenticate" "Token realm=\"/\""
+            status status401
 
-        case eitherPlayerError of
-            (Right player) -> do
-                MovePacket from to <- jsonData
-                moveResult <- runGameState $ do
-                    moveResult <- move player (Move from to)
-                    return moveResult
+  where
+    extractHeader = do
+        maybeTokenText <- lift (header "Authorization")
+        (unpack <$> maybeTokenText) `valueOr` NoAuthHeader
 
-                case moveResult of
-                    GameOver -> do
-                        newGS <- createGameState <$> runRandom mapGenerator
-                        runGameState $ S.put newGS
-                        emptyJsonResponse
-                    GameContinues -> emptyJsonResponse
-                    InvalidMove -> do
-                        status status400
-                        text "Invalid move"
+    parseHeader tokenString = parseToken tokenString `valueOr` MalformedHeader
+    findPlayer tokens token = lookupToken token tokens `valueOr` NoSuchPlayer
 
-            (Left NoAuthHeader) -> do
-                setHeader "WWW-Authenticate" "Token realm=\"/\""
-                status status401
+    valueOr mval err = case mval of
+        Just val -> right val
+        Nothing -> left err
 
-            (Left MalformedHeader) -> do
-                status status401
-
-            (Left NoSuchPlayer) -> do
-                status status401
-
-    where
-        extractHeader = do
-            maybeTokenText <- lift (header "Authorization")
-            (unpack <$> maybeTokenText) `valueOr` NoAuthHeader
-
-        parseHeader tokenString = parseToken tokenString `valueOr` MalformedHeader
-        findPlayer tokens token = lookupToken token tokens `valueOr` NoSuchPlayer
-
-        valueOr mval err = case mval of
-            Just val -> right val
-            Nothing -> left err
-
-        parseToken str = p (words str)
-            where p :: [String] -> Maybe Token
-                  p ["Token", token] = readMaybe token
-                  p _ = Nothing
+    parseToken str = p (words str)
+        where p :: [String] -> Maybe Token
+              p ["Token", token] = readMaybe token
+              p _ = Nothing

@@ -79,34 +79,3 @@ startScotty port app initialState = do
         runActionToIO = runM
     scottyT port runM runActionToIO app
 
-{-
-main :: IO ()
-main = do
-    sync <- newTVarIO def
-        -- Note that 'runM' is only called once, at startup.
-    let runM m = runReaderT (runWebM m) sync
-        -- 'runActionToIO' is called once per action.
-        runActionToIO = runM
-
-    scottyT 3000 runM runActionToIO app
-
--- This app doesn't use raise/rescue, so the exception
--- type is ambiguous. We can fix it by putting a type
--- annotation just about anywhere. In this case, we'll
--- just do it on the entire app.
-app :: ScottyT Text WebM ()
-app = do
-    middleware logStdoutDev
-    get "/" $ do
-        c <- webM $ gets tickCount
-        text $ fromString $ show c
-
-    get "/plusone" $ do
-        webM $ modify $ \ st -> st { tickCount = tickCount st + 1 }
-        redirect "/"
-
-    get "/plustwo" $ do
-        webM $ modify $ \ st -> st { tickCount = tickCount st + 2 }
-        redirect "/"
-
--}

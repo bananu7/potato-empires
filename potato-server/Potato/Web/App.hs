@@ -31,6 +31,8 @@ import Text.Read (readMaybe)
 import Data.Text.Lazy (unpack, pack)
 import Data.Maybe
 import qualified Data.List (find)
+import Data.Map
+import Data.Map.Lens
 
 type PlayerTokenMap = [(Token,Player)]
 
@@ -49,9 +51,10 @@ makeLenses ''TableState
 isTableFull :: TableState -> Bool
 isTableFull t = (length $ t ^. tokens) == (t ^. desiredPlayerCount)
 
+type TableId = Int
 data ServerState = ServerState {
     _gameState :: GameState,
-    _tableState :: TableState,
+    _tables :: Map TableId TableState,
     _gen :: StdGen
     }
 makeLenses ''ServerState
@@ -120,19 +123,29 @@ app clientDir mapGenerator = do
 
     post "/request-token" handlerRequestToken
     post "/move" $ handlerMove mapGenerator
-
+ 
 handlerRequestToken = do 
     player <- param "player"
-    ts <- runWebMState $ use (tableState.tokens)
-    let maybePlayer = lookupPlayer player ts
-    if (isJust maybePlayer)
-        then do
+    tableId <- param "table"
+    maybeResult <- runWebMState $ do        
+        maybeTable <- lookup tableId <$> use tables 
+        let maybeTokens = (view tokens) <$> maybeTable
+        let maybePlayer = lookupPlayer player <$> maybeTokens
+
+        if isJust maybePlayer
+            then return Nothing -- seat taken
+            else do
+                -- This use of `fromJust` is okay because of the informal invariant
+                -- if maybePlayer lookup succeeded, maybeTokens must also be ok
+                token <- hoistStateWithLens gen $ randomWithRepick lookupToken (fromJust maybeTokens) (1,1000)
+                tables . at tableId . traverse . tokens %= ((token, player) :)
+                return $ Just token
+                
+    case maybeResult of
+        Just token -> text . pack $ show token
+        Nothing -> do
             status status403
-            text "Seat already taken"
-        else do
-            token <- runRandom $ randomWithRepick lookupToken ts (1,1000)
-            runWebMState $ (tableState.tokens) %= ((token, player):)
-            text . pack $ show token
+            text "Token request failed"
  where
     randomWithRepick fLookup xs range = do
         x <- S.state $ randomR range
@@ -140,10 +153,12 @@ handlerRequestToken = do
             then return x
             else randomWithRepick fLookup xs range
 
-data MoveHandlerError = NoAuthHeader | MalformedHeader | NoSuchPlayer deriving (Eq, Show)
+data MoveHandlerError = NoAuthHeader | MalformedHeader | NoSuchPlayer | NoSuchGame deriving (Eq, Show)
 handlerMove mapGenerator = do
-    ts <- runWebMState $ use (tableState.tokens)
-    eitherPlayerError <- runEitherT $ extractHeader >>= parseHeader >>= findPlayer ts       
+    tableId <- param "table"
+
+    eitherPlayerError <- lift $ runEitherT $ findPlayer <$> (getTokenList tableId) <*> (extractHeader >>= parseHeader)
+
     case eitherPlayerError of
         Right player -> do
             MovePacket from to <- jsonData
@@ -168,6 +183,12 @@ handlerMove mapGenerator = do
             status status401
 
   where
+    getTokenList tableId = runWebMState $ do
+        tableMap <- use tables
+        let maybeTable = lookup tableId tableMap
+        let maybeTokens = (view tokens) <$> maybeTable
+        return $ maybeTokens `valueOr` NoSuchGame
+
     extractHeader = do
         maybeTokenText <- lift (header "Authorization")
         (unpack <$> maybeTokenText) `valueOr` NoAuthHeader
